@@ -1,0 +1,21 @@
+uuid: c51a1fd8-1ac4-4ec1-aef9-0a5c3c910396
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+id: storage_assignment.field_storage_stripe_sub_id
+field_name: field_storage_stripe_sub_id
+entity_type: storage_assignment
+type: string
+settings:
+  max_length: 255
+  case_sensitive: false
+  is_ascii: false
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

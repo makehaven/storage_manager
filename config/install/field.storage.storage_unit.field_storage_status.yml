@@ -1,0 +1,30 @@
+uuid: 5d53a8f5-db23-4895-aeee-ab52c7c81b4f
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+    - options
+id: storage_unit.field_storage_status
+field_name: field_storage_status
+entity_type: storage_unit
+type: list_string
+settings:
+  allowed_values:
+    -
+      value: vacant
+      label: Vacant
+    -
+      value: occupied
+      label: Occupied
+    -
+      value: inactive
+      label: Inactive
+  allowed_values_function: ''
+module: options
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

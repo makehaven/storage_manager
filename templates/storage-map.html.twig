@@ -1,0 +1,8 @@
+<div class="storage-map">
+  {# Optional: set a background image in CSS #}
+  {% for u in units %}
+    <div class="storage-dot" title="{{ u.label }} ({{ u.status }})"
+         style="left: {{ u.x }}%; top: {{ u.y }}%; background: {{ u.color }};">
+    </div>
+  {% endfor %}
+</div>

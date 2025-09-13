@@ -1,0 +1,20 @@
+uuid: 87d46a2e-8ccb-43ab-b062-b0d4581822ac
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+id: storage_assignment.field_storage_price_snapshot
+field_name: field_storage_price_snapshot
+entity_type: storage_assignment
+type: decimal
+settings:
+  precision: 10
+  scale: 2
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

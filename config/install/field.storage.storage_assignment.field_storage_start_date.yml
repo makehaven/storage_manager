@@ -1,0 +1,20 @@
+uuid: a24a9530-2d43-4158-bc17-da4556e24f27
+langcode: en
+status: true
+dependencies:
+  module:
+    - datetime
+    - eck
+id: storage_assignment.field_storage_start_date
+field_name: field_storage_start_date
+entity_type: storage_assignment
+type: datetime
+settings:
+  datetime_type: date
+module: datetime
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

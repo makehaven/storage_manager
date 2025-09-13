@@ -1,0 +1,21 @@
+uuid: 3a5c98b1-10d3-4e4e-b8df-062cded06bf2
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_storage_start_date
+  module:
+    - datetime
+id: storage_assignment.storage_assignment.field_storage_start_date
+field_name: field_storage_start_date
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Storage start_date'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: datetime

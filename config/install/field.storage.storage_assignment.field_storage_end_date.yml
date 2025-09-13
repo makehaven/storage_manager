@@ -1,0 +1,20 @@
+uuid: d15dd9d3-b338-401d-9997-5eaaa7271417
+langcode: en
+status: true
+dependencies:
+  module:
+    - datetime
+    - eck
+id: storage_assignment.field_storage_end_date
+field_name: field_storage_end_date
+entity_type: storage_assignment
+type: datetime
+settings:
+  datetime_type: datetime
+module: datetime
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

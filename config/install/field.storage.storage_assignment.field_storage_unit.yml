@@ -1,0 +1,19 @@
+uuid: 5231eb40-f390-4314-9782-4e2bf3f459af
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+id: storage_assignment.field_storage_unit
+field_name: field_storage_unit
+entity_type: storage_assignment
+type: entity_reference
+settings:
+  target_type: storage_unit
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

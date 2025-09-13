@@ -1,0 +1,4 @@
+manage storage:
+  title: 'Manage storage units and assignments'
+  description: 'Assign/release storage and resolve issues'
+  restrict: true

@@ -1,0 +1,9 @@
+uuid: 2936eaeb-828a-46f7-afff-c8041a767d28
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_assignment
+name: storage_assignment
+type: storage_assignment
+description: ''

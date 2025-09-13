@@ -1,0 +1,29 @@
+uuid: 3d6e26a1-7675-431b-8756-d4ae40e01f5a
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_storage_user
+id: storage_assignment.storage_assignment.field_storage_user
+field_name: field_storage_user
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Storage User'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:user'
+  handler_settings:
+    target_bundles: null
+    sort:
+      field: _none
+      direction: ASC
+    auto_create: false
+    filter:
+      type: _none
+    include_anonymous: true
+field_type: entity_reference

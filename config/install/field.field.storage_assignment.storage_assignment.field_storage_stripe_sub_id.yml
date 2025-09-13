@@ -1,0 +1,19 @@
+uuid: 0d04364f-f6f6-4a95-b11f-9bdde76329a5
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_storage_stripe_sub_id
+id: storage_assignment.storage_assignment.field_storage_stripe_sub_id
+field_name: field_storage_stripe_sub_id
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Storage stripe_sub ID'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

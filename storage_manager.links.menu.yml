@@ -1,0 +1,6 @@
+storage_manager.dashboard:
+  title: 'Storage Dashboard'
+  description: 'Units, vacancies, flags'
+  route_name: storage_manager.dashboard
+  parent: system.admin_content
+  weight: -20

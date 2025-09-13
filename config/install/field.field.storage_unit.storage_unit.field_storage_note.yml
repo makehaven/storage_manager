@@ -1,0 +1,19 @@
+uuid: 9001fecb-2a2e-4984-9bb9-ef5bf02f5109
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_unit.storage_unit
+    - field.storage.storage_unit.field_storage_note
+id: storage_unit.storage_unit.field_storage_note
+field_name: field_storage_note
+entity_type: storage_unit
+bundle: storage_unit
+label: storage_note
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

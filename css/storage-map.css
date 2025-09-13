@@ -1,0 +1,18 @@
+.storage-map {
+    position: relative;
+    width: 100%;
+    padding-top: 60%; /* aspect ratio; adjust */
+    background-size: cover;
+    background-position: center;
+    /* Example background (set via theme or here):
+       background-image: url('/sites/default/files/floor-map.png'); */
+  }
+  .storage-dot {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    outline: 2px solid #fff;
+    transform: translate(-50%, -50%);
+  }
+  

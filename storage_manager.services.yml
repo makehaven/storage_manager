@@ -1,0 +1,19 @@
+services:
+  logger.channel.storage_manager:
+    parent: logger.channel_base
+    arguments: ['storage_manager']
+
+  storage_manager.subscription_manager:
+    class: Drupal\storage_manager\Stripe\SubscriptionManager
+    arguments: ['@logger.channel.storage_manager']
+    # Add Stripe client later if you enable Stripe.
+
+  storage_manager.assignment_guard:
+    class: Drupal\storage_manager\Service\AssignmentGuard
+    arguments: ['@entity_type.manager', '@logger.channel.storage_manager']
+
+  storage_manager.assignment_subscriber:
+    class: Drupal\storage_manager\EventSubscriber\AssignmentSubscriber
+    arguments: ['@storage_manager.assignment_guard']
+    tags:
+      - { name: event_subscriber }

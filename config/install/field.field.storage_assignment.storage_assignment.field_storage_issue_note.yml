@@ -1,0 +1,19 @@
+uuid: acde04ee-8c10-4048-90e8-1d3f206a40b6
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_storage_issue_note
+id: storage_assignment.storage_assignment.field_storage_issue_note
+field_name: field_storage_issue_note
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Storage issue_note'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

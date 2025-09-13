@@ -1,0 +1,9 @@
+uuid: ab146d4c-8217-46bb-b16a-def5fcb9028f
+langcode: en
+status: true
+dependencies: {  }
+name: storage_type
+vid: storage_type
+description: null
+weight: 0
+new_revision: false

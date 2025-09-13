@@ -1,0 +1,10 @@
+uuid: 45c90ed6-9752-4c7d-b102-98353a52b078
+langcode: en
+status: false
+dependencies: {  }
+id: storage_unit
+label: storage_unit
+uid: false
+created: true
+changed: true
+title: false

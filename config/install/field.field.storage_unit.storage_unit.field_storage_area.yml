@@ -1,0 +1,22 @@
+uuid: aa6acc57-8ed8-4d9e-ad28-360b510a3be6
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_unit.storage_unit
+    - field.storage.storage_unit.field_storage_area
+id: storage_unit.storage_unit.field_storage_area
+field_name: field_storage_area
+entity_type: storage_unit
+bundle: storage_unit
+label: storage_area
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: eca
+  handler_settings:
+    field_name: field_storage_area
+field_type: entity_reference

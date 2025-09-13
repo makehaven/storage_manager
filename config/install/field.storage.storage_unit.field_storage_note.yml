@@ -1,0 +1,19 @@
+uuid: effce888-104a-40b4-8d05-be3a45d0c396
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+id: storage_unit.field_storage_note
+field_name: field_storage_note
+entity_type: storage_unit
+type: string_long
+settings:
+  case_sensitive: false
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

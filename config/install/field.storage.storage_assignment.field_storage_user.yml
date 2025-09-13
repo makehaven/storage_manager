@@ -1,0 +1,20 @@
+uuid: 89a63781-a36c-4526-8eae-4fc377f5fc79
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+    - user
+id: storage_assignment.field_storage_user
+field_name: field_storage_user
+entity_type: storage_assignment
+type: entity_reference
+settings:
+  target_type: user
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

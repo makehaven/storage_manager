@@ -1,0 +1,13 @@
+name: Storage Manager
+type: module
+description: Manages storage units, assignments, and (optional) Stripe subscriptions.
+core_version_requirement: ^10
+package: MakeHaven
+dependencies:
+  - eck:eck
+  - drupal:taxonomy
+  - drupal:user
+  - drupal:views
+  - drupal:field
+  - drupal:system
+  - drupal:views

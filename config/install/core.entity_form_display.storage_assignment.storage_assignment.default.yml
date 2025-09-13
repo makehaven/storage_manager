@@ -1,0 +1,108 @@
+uuid: 9416407f-5497-415a-905f-0dc6c2fa7275
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.field.storage_assignment.storage_assignment.field_storage_assignment_status
+    - field.field.storage_assignment.storage_assignment.field_storage_end_date
+    - field.field.storage_assignment.storage_assignment.field_storage_issue_note
+    - field.field.storage_assignment.storage_assignment.field_storage_issue_open
+    - field.field.storage_assignment.storage_assignment.field_storage_price_snapshot
+    - field.field.storage_assignment.storage_assignment.field_storage_start_date
+    - field.field.storage_assignment.storage_assignment.field_storage_stripe_sub_id
+    - field.field.storage_assignment.storage_assignment.field_storage_unit
+    - field.field.storage_assignment.storage_assignment.field_storage_user
+  module:
+    - datetime
+id: storage_assignment.storage_assignment.default
+targetEntityType: storage_assignment
+bundle: storage_assignment
+mode: default
+content:
+  created:
+    type: datetime_timestamp
+    weight: 10
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_storage_assignment_status:
+    type: options_select
+    weight: 15
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_storage_end_date:
+    type: datetime_default
+    weight: 14
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_storage_issue_note:
+    type: string_textarea
+    weight: 18
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+  field_storage_issue_open:
+    type: boolean_checkbox
+    weight: 17
+    region: content
+    settings:
+      display_label: true
+    third_party_settings: {  }
+  field_storage_price_snapshot:
+    type: number
+    weight: 16
+    region: content
+    settings:
+      placeholder: ''
+    third_party_settings: {  }
+  field_storage_start_date:
+    type: datetime_default
+    weight: 13
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_storage_stripe_sub_id:
+    type: string_textfield
+    weight: 19
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_storage_unit:
+    type: entity_reference_autocomplete
+    weight: 11
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_storage_user:
+    type: entity_reference_autocomplete
+    weight: 12
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  uid:
+    type: entity_reference_autocomplete
+    weight: 5
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+hidden:
+  uuid: true

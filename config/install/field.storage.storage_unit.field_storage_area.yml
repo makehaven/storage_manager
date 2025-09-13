@@ -1,0 +1,20 @@
+uuid: e0478f41-2c86-4c97-9def-154c27d6eb50
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+    - taxonomy
+id: storage_unit.field_storage_area
+field_name: field_storage_area
+entity_type: storage_unit
+type: entity_reference
+settings:
+  target_type: taxonomy_term
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

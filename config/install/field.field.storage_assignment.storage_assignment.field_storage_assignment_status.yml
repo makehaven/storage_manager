@@ -1,0 +1,21 @@
+uuid: 8468ed95-0fd8-4b83-bae3-24617a616e43
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_storage_assignment_status
+  module:
+    - options
+id: storage_assignment.storage_assignment.field_storage_assignment_status
+field_name: field_storage_assignment_status
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Storage assignment_status'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

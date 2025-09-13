@@ -1,0 +1,62 @@
+uuid: 5cb82e1b-221a-42d5-a81e-3652c99404da
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_unit.storage_unit
+    - field.field.storage_unit.storage_unit.field_storage_area
+    - field.field.storage_unit.storage_unit.field_storage_note
+    - field.field.storage_unit.storage_unit.field_storage_status
+  module:
+    - options
+id: storage_unit.storage_unit.default
+targetEntityType: storage_unit
+bundle: storage_unit
+mode: default
+content:
+  created:
+    type: timestamp
+    label: hidden
+    settings:
+      date_format: medium
+      custom_date_format: ''
+      timezone: ''
+      tooltip:
+        date_format: long
+        custom_date_format: ''
+      time_diff:
+        enabled: false
+        future_format: '@interval hence'
+        past_format: '@interval ago'
+        granularity: 2
+        refresh: 60
+    third_party_settings: {  }
+    weight: 0
+    region: content
+  field_storage_area:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 3
+    region: content
+  field_storage_note:
+    type: basic_string
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 2
+    region: content
+  field_storage_status:
+    type: list_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 1
+    region: content
+hidden:
+  breadcrumbs: true
+  changed: true
+  search_api_excerpt: true
+  uuid: true

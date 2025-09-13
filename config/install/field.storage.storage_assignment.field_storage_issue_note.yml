@@ -1,0 +1,19 @@
+uuid: a37e55e0-6419-45ba-af71-3a117a658830
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+id: storage_assignment.field_storage_issue_note
+field_name: field_storage_issue_note
+entity_type: storage_assignment
+type: string_long
+settings:
+  case_sensitive: false
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false
