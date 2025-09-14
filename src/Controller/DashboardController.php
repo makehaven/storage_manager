@@ -14,6 +14,26 @@ class DashboardController extends ControllerBase {
       '#attributes' => ['class' => ['storage-dashboard']],
     ];
 
+    $build['taxonomy_links'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['taxonomy-links']],
+      '#weight' => -10,
+    ];
+
+    $build['taxonomy_links']['storage_area'] = [
+      '#type' => 'link',
+      '#title' => $this->t('Manage Storage Areas'),
+      '#url' => Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area']),
+      '#attributes' => ['class' => ['button', 'button--primary']],
+    ];
+
+    $build['taxonomy_links']['storage_type'] = [
+      '#type' => 'link',
+      '#title' => $this->t('Manage Storage Types'),
+      '#url' => Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type']),
+      '#attributes' => ['class' => ['button', 'button--primary']],
+    ];
+
     $u_storage = $this->entityTypeManager()->getStorage('storage_unit');
     $ids = $u_storage->getQuery()->accessCheck(FALSE)->execute();
     $units = $u_storage->loadMultiple($ids);

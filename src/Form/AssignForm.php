@@ -95,6 +95,7 @@ class AssignForm extends FormBase {
     }
 
     $assignment = $a_storage->create([
+      'type' => 'storage_assignment',
       'field_storage_unit' => $unit->id(),
       'field_storage_user' => $form_state->getValue('user'),
       'field_storage_start_date' => $form_state->getValue('start_date'),
