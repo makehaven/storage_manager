@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.taxonomy_term.field_monthly_price
+    - taxonomy.vocabulary.storage_type
+id: taxonomy_term.storage_type.field_monthly_price
+field_name: field_monthly_price
+entity_type: taxonomy_term
+bundle: storage_type
+label: 'Monthly Price'
+description: 'The monthly price for this type of storage.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: decimal

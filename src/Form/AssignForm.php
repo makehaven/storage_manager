@@ -95,13 +95,14 @@ class AssignForm extends FormBase {
     }
 
     $assignment = $a_storage->create([
+      'type' => 'storage_assignment',
       'field_storage_unit' => $unit->id(),
       'field_storage_user' => $form_state->getValue('user'),
-      'field_start_date' => $form_state->getValue('start_date'),
-      'field_assignment_status' => 'Active',
-      'field_price_snapshot' => $price_snapshot,
-      'field_issue_open' => $form_state->getValue('issue_open') ? 1 : 0,
-      'field_issue_note' => $form_state->getValue('issue_note'),
+      'field_storage_start_date' => $form_state->getValue('start_date'),
+      'field_storage_assignment_status' => 'Active',
+      'field_storage_price_snapshot' => $price_snapshot,
+      'field_storage_issue_open' => $form_state->getValue('issue_open') ? 1 : 0,
+      'field_storage_issue_note' => $form_state->getValue('issue_note'),
     ]);
     $assignment->save();
 

@@ -11,9 +11,3 @@ services:
   storage_manager.assignment_guard:
     class: Drupal\storage_manager\Service\AssignmentGuard
     arguments: ['@entity_type.manager', '@logger.channel.storage_manager']
-
-  storage_manager.assignment_subscriber:
-    class: Drupal\storage_manager\EventSubscriber\AssignmentSubscriber
-    arguments: ['@storage_manager.assignment_guard']
-    tags:
-      - { name: event_subscriber }

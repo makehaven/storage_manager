@@ -17,7 +17,7 @@ class WebhookController extends ControllerBase {
     // Examples:
     // - customer.subscription.updated / deleted
     // - invoice.payment_failed
-    // Use `field_stripe_subscription_id` to find the assignment and update.
+    // Use `field_storage_stripe_sub_id` to find the assignment and update.
     $this->logger('storage_manager')->info('Webhook: @type', ['@type' => $payload['type']]);
 
     return new Response('ok', 200);
