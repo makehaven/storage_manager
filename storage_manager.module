@@ -11,24 +11,34 @@ use Drupal\Core\Entity\EntityInterface;
  * Implements hook_entity_presave().
  */
 function storage_manager_entity_presave(EntityInterface $entity) {
-  if ($entity->getEntityTypeId() !== 'storage_assignment') {
-    return;
-  }
+  if ($entity->getEntityTypeId() === 'storage_assignment') {
+    // When an assignment is being created or updated, if the status is not
+    // "Active", then we don't need to do anything.
+    $status_field = 'field_storage_assignment_status';
+    if (!$entity->hasField($status_field) || $entity->get($status_field)->value !== 'Active') {
+      return;
+    }
 
-  // When an assignment is being created or updated, if the status is not
-  // "Active", then we don't need to do anything.
-  $status_field = 'field_storage_assignment_status';
-  if (!$entity->hasField($status_field) || $entity->get($status_field)->value !== 'Active') {
-    return;
+    // If some *other* Active assignment exists for this unit, block.
+    $unit_field = 'field_storage_unit';
+    if ($entity->hasField($unit_field) && ($unit = $entity->get($unit_field)->entity)) {
+      /** @var \Drupal\storage_manager\Service\AssignmentGuard $guard */
+      $guard = \Drupal::service('storage_manager.assignment_guard');
+      if ($entity->isNew() && $guard->unitHasActiveAssignment($unit->id())) {
+        throw new \RuntimeException('This storage unit already has an active assignment.');
+      }
+    }
   }
+}
 
-  // If some *other* Active assignment exists for this unit, block.
-  $unit_field = 'field_storage_unit';
-  if ($entity->hasField($unit_field) && ($unit = $entity->get($unit_field)->entity)) {
-    /** @var \Drupal\storage_manager\Service\AssignmentGuard $guard */
-    $guard = \Drupal::service('storage_manager.assignment_guard');
-    if ($entity->isNew() && $guard->unitHasActiveAssignment($unit->id())) {
-      throw new \RuntimeException('This storage unit already has an active assignment.');
+/**
+ * Implements hook_entity_insert().
+ */
+function storage_manager_entity_insert(EntityInterface $entity) {
+  if ($entity->getEntityTypeId() === 'storage_unit') {
+    if (!$entity->get('field_storage_unit_id')->value) {
+      $entity->set('field_storage_unit_id', $entity->id());
+      $entity->save();
     }
   }
 }

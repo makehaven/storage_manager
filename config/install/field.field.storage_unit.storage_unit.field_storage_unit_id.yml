@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_unit.storage_unit
+    - field.storage.storage_unit.field_storage_unit_id
+id: storage_unit.storage_unit.field_storage_unit_id
+field_name: field_storage_unit_id
+entity_type: storage_unit
+bundle: storage_unit
+label: 'Unit ID'
+description: 'A unique identifier for the storage unit.'
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

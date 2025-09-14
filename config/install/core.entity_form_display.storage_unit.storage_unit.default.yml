@@ -10,6 +10,7 @@ dependencies:
     - field.field.storage_unit.storage_unit.field_storage_x
     - field.field.storage_unit.storage_unit.field_storage_y
     - field.field.storage_unit.storage_unit.field_storage_type
+    - field.field.storage_unit.storage_unit.field_storage_unit_id
 id: storage_unit.storage_unit.default
 targetEntityType: storage_unit
 bundle: storage_unit
@@ -21,15 +22,19 @@ content:
     region: content
     settings: {  }
     third_party_settings: {  }
-  field_storage_area:
-    type: entity_reference_autocomplete
-    weight: 14
+  field_storage_unit_id:
+    type: string_textfield
+    weight: -10
     region: content
     settings:
-      match_operator: CONTAINS
-      match_limit: 10
       size: 60
       placeholder: ''
+    third_party_settings: {  }
+  field_storage_area:
+    type: options_select
+    weight: 14
+    region: content
+    settings: {  }
     third_party_settings: {  }
   field_storage_note:
     type: string_textarea

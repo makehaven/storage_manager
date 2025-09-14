@@ -10,6 +10,7 @@ dependencies:
     - field.field.storage_unit.storage_unit.field_storage_x
     - field.field.storage_unit.storage_unit.field_storage_y
     - field.field.storage_unit.storage_unit.field_storage_type
+    - field.field.storage_unit.storage_unit.field_storage_unit_id
   module:
     - options
 id: storage_unit.storage_unit.default
@@ -35,6 +36,14 @@ content:
         refresh: 60
     third_party_settings: {  }
     weight: 0
+    region: content
+  field_storage_unit_id:
+    type: string
+    label: hidden
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: -10
     region: content
   field_storage_area:
     type: entity_reference_label

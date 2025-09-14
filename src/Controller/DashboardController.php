@@ -34,6 +34,14 @@ class DashboardController extends ControllerBase {
       '#attributes' => ['class' => ['button', 'button--primary']],
     ];
 
+    $build['add_unit_link'] = [
+      '#type' => 'link',
+      '#title' => $this->t('Add Storage Unit'),
+      '#url' => Url::fromRoute('eck.entity.add', ['eck_entity_type' => 'storage_unit', 'eck_entity_bundle' => 'storage_unit']),
+      '#attributes' => ['class' => ['button', 'button--action']],
+      '#weight' => -9,
+    ];
+
     $u_storage = $this->entityTypeManager()->getStorage('storage_unit');
     $ids = $u_storage->getQuery()->accessCheck(FALSE)->execute();
     $units = $u_storage->loadMultiple($ids);

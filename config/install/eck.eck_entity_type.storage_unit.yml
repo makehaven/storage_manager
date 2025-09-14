@@ -7,4 +7,4 @@ label: storage_unit
 uid: false
 created: true
 changed: true
-title: false
+title: 'field_storage_unit_id'
