@@ -1,7 +1,7 @@
 name: Storage Manager
 type: module
 description: Manages storage units, assignments, and (optional) Stripe subscriptions.
-core_version_requirement: ^10
+core_version_requirement: ^10 || ^11
 package: MakeHaven
 dependencies:
   - eck:eck

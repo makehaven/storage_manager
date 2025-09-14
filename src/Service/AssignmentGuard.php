@@ -18,7 +18,7 @@ class AssignmentGuard {
     $storage = $this->etm->getStorage('storage_assignment');
     $ids = $storage->getQuery()
       ->condition('field_storage_unit', $unit_id)
-      ->condition('field_assignment_status', 'Active')
+      ->condition('field_storage_assignment_status', 'Active')
       ->accessCheck(FALSE)
       ->range(0, 1)
       ->execute();

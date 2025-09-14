@@ -23,7 +23,7 @@ class AssignmentSubscriber implements EventSubscriberInterface {
     if ($entity->getEntityTypeId() !== 'storage_assignment') {
       return;
     }
-    $status = $entity->get('field_assignment_status')->value;
+    $status = $entity->get('field_storage_assignment_status')->value;
     if ($status !== 'Active') {
       return;
     }

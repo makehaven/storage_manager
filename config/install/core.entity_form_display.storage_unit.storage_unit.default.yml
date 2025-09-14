@@ -7,6 +7,9 @@ dependencies:
     - field.field.storage_unit.storage_unit.field_storage_area
     - field.field.storage_unit.storage_unit.field_storage_note
     - field.field.storage_unit.storage_unit.field_storage_status
+    - field.field.storage_unit.storage_unit.field_storage_x
+    - field.field.storage_unit.storage_unit.field_storage_y
+    - field.field.storage_unit.storage_unit.field_storage_type
 id: storage_unit.storage_unit.default
 targetEntityType: storage_unit
 bundle: storage_unit
@@ -20,7 +23,7 @@ content:
     third_party_settings: {  }
   field_storage_area:
     type: entity_reference_autocomplete
-    weight: 13
+    weight: 14
     region: content
     settings:
       match_operator: CONTAINS
@@ -30,17 +33,37 @@ content:
     third_party_settings: {  }
   field_storage_note:
     type: string_textarea
-    weight: 12
+    weight: 13
     region: content
     settings:
       rows: 5
       placeholder: ''
+    third_party_settings: {  }
+  field_storage_type:
+    type: options_select
+    weight: 12
+    region: content
+    settings: {  }
     third_party_settings: {  }
   field_storage_status:
     type: options_select
     weight: 11
     region: content
     settings: {  }
+    third_party_settings: {  }
+  field_storage_x:
+    type: number
+    weight: 14
+    region: content
+    settings:
+      placeholder: ''
+    third_party_settings: {  }
+  field_storage_y:
+    type: number
+    weight: 15
+    region: content
+    settings:
+      placeholder: ''
     third_party_settings: {  }
 hidden:
   uuid: true

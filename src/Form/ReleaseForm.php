@@ -46,14 +46,14 @@ class ReleaseForm extends FormBase {
     $a_storage = \Drupal::entityTypeManager()->getStorage('storage_assignment');
     $ids = $a_storage->getQuery()
       ->condition('field_storage_unit', $unit_id)
-      ->condition('field_assignment_status', 'Active')
+      ->condition('field_storage_assignment_status', 'Active')
       ->accessCheck(FALSE)
       ->execute();
 
     if ($ids) {
       $assignment = $a_storage->load(reset($ids));
-      $assignment->set('field_assignment_status', 'Ended');
-      $assignment->set('field_end_date', $form_state->getValue('end_date'));
+      $assignment->set('field_storage_assignment_status', 'Ended');
+      $assignment->set('field_storage_end_date', $form_state->getValue('end_date'));
       $assignment->save();
 
       // (Optional) Stripe cancel if enabled.
