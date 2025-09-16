@@ -1,6 +1,6 @@
 storage_manager.dashboard:
-  title: 'Storage Dashboard'
-  description: 'Units, vacancies, flags'
+  title: 'Storage Manager'
+  description: 'Manage storage units, assignments, and settings.'
   route_name: storage_manager.dashboard
-  parent: system.admin_structure
-  weight: -20
+  parent: system.admin_config
+  weight: 10
