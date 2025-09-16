@@ -1,7 +1,12 @@
 uuid: 941e31e1-d36f-4919-8145-1719d15187e8
 langcode: en
 status: false
-dependencies: {  }
+dependencies:
+  module:
+    - eck
+  enforced:
+    module:
+      - storage_manager
 id: storage_assignment
 label: storage_assignment
 uid: true

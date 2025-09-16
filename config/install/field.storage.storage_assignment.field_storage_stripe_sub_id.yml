@@ -2,6 +2,9 @@ uuid: c51a1fd8-1ac4-4ec1-aef9-0a5c3c910396
 langcode: en
 status: true
 dependencies:
+  enforced:
+    module:
+      - storage_manager
   module:
     - eck
 id: storage_assignment.field_storage_stripe_sub_id

@@ -2,6 +2,9 @@ uuid: 8933010d-a800-48c3-9e99-0c8d97b02cf9
 langcode: en
 status: true
 dependencies:
+  enforced:
+    module:
+      - storage_manager
   module:
     - eck
     - options
