@@ -2,12 +2,13 @@ uuid: a24a9530-2d43-4158-bc17-da4556e24f27
 langcode: en
 status: true
 dependencies:
+  config:
+    - eck.eck_entity_type.storage_assignment
   enforced:
     module:
       - storage_manager
   module:
     - datetime
-    - eck
 id: storage_assignment.field_storage_start_date
 field_name: field_storage_start_date
 entity_type: storage_assignment
