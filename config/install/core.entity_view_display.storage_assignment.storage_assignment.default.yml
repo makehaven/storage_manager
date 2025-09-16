@@ -2,6 +2,9 @@ uuid: 388b3681-1258-4361-8fb1-69c10257603f
 langcode: en
 status: true
 dependencies:
+  enforced:
+    module:
+      - storage_manager
   config:
     - eck.eck_type.storage_assignment.storage_assignment
     - field.field.storage_assignment.storage_assignment.field_storage_assignment_status

@@ -2,6 +2,9 @@ uuid: d15dd9d3-b338-401d-9997-5eaaa7271417
 langcode: en
 status: true
 dependencies:
+  enforced:
+    module:
+      - storage_manager
   module:
     - datetime
     - eck

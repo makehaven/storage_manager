@@ -4,6 +4,9 @@ status: true
 dependencies:
   config:
     - eck.eck_entity_type.storage_assignment
+  enforced:
+    module:
+      - storage_manager
 name: storage_assignment
 type: storage_assignment
 description: ''

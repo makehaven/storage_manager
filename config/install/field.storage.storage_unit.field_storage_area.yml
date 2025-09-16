@@ -2,6 +2,9 @@ uuid: e0478f41-2c86-4c97-9def-154c27d6eb50
 langcode: en
 status: true
 dependencies:
+  enforced:
+    module:
+      - storage_manager
   module:
     - eck
     - taxonomy

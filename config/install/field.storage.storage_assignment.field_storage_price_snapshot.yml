@@ -2,6 +2,9 @@ uuid: 87d46a2e-8ccb-43ab-b062-b0d4581822ac
 langcode: en
 status: true
 dependencies:
+  enforced:
+    module:
+      - storage_manager
   module:
     - eck
 id: storage_assignment.field_storage_price_snapshot

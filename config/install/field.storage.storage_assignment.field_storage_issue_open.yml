@@ -2,6 +2,9 @@ uuid: 14977322-14d6-40af-aef5-09f7fc4e99a8
 langcode: en
 status: true
 dependencies:
+  enforced:
+    module:
+      - storage_manager
   module:
     - eck
 id: storage_assignment.field_storage_issue_open
