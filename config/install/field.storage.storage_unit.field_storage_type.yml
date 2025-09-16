@@ -1,12 +1,13 @@
 langcode: en
 status: true
 dependencies:
+  config:
+    - eck.eck_entity_type.storage_unit
   enforced:
     module:
       - storage_manager
   module:
-    - eck
-    - taxonomy
+    - core
 id: storage_unit.field_storage_type
 field_name: field_storage_type
 entity_type: storage_unit

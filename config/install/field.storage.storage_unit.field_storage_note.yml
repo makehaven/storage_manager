@@ -2,11 +2,13 @@ uuid: effce888-104a-40b4-8d05-be3a45d0c396
 langcode: en
 status: true
 dependencies:
+  config:
+    - eck.eck_entity_type.storage_unit
   enforced:
     module:
       - storage_manager
   module:
-    - eck
+    - core
 id: storage_unit.field_storage_note
 field_name: field_storage_note
 entity_type: storage_unit
