@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for the Storage Manager module.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * Sets the initial schema version.
+ */
+function storage_manager_install() {
+  // Set the initial schema version.
+  \Drupal::service('keyvalue')->get('system.schema')->set('storage_manager', 10001);
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * An empty update hook to set the initial schema version.
+ */
+function storage_manager_update_10001() {
+  // This is an empty update hook to set the initial schema version.
+  // No database changes are needed.
+  return t('Storage Manager module schema updated to 10001.');
+}
