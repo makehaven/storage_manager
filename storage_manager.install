@@ -5,6 +5,8 @@
  * Install, update, and uninstall functions for the Storage Manager module.
  */
 
+use Drupal\taxonomy\Entity\Term;
+
 /**
  * Implements hook_install().
  *
@@ -13,6 +15,11 @@
 function storage_manager_install() {
   // Set the initial schema version.
   \Drupal::service('keyvalue')->get('system.schema')->set('storage_manager', 10001);
+
+  // Seed the storage areas.
+  _storage_manager_seed_storage_areas();
+  // Seed the storage types.
+  _storage_manager_seed_storage_types();
 }
 
 /**
@@ -24,4 +31,42 @@ function storage_manager_update_10001() {
   // This is an empty update hook to set the initial schema version.
   // No database changes are needed.
   return t('Storage Manager module schema updated to 10001.');
+}
+
+/**
+ * Seed common storage areas (safe to re-run).
+ */
+function _storage_manager_seed_storage_areas() {
+  $vid = 'storage_area';
+  $names = ['Woodshop', 'Metalshop', 'Studio', 'CNC Room'];
+  foreach ($names as $name) {
+    $exists = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->getQuery()
+      ->condition('vid', $vid)
+      ->condition('name', $name)
+      ->accessCheck(FALSE)
+      ->range(0, 1)
+      ->execute();
+    if (!$exists) {
+      Term::create(['vid' => $vid, 'name' => $name])->save();
+    }
+  }
+}
+
+/**
+ * Seed common storage types (safe to re-run).
+ */
+function _storage_manager_seed_storage_types() {
+  $vid = 'storage_type';
+  $names = ['Small Bin', 'Large Bin'];
+  foreach ($names as $name) {
+    $exists = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->getQuery()
+      ->condition('vid', $vid)
+      ->condition('name', $name)
+      ->accessCheck(FALSE)
+      ->range(0, 1)
+      ->execute();
+    if (!$exists) {
+      Term::create(['vid' => $vid, 'name' => $name])->save();
+    }
+  }
 }

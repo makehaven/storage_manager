@@ -7,6 +7,6 @@ dependencies:
       - storage_manager
 name: storage_type
 vid: storage_type
-description: null
+description: 'A type of storage unit, which determines its monthly price (e.g. "Small Bin", "Large Bin").'
 weight: 0
 new_revision: false
