@@ -86,7 +86,7 @@ class DashboardController extends ControllerBase {
       }
 
       $edit_link = Link::fromTextAndUrl('Edit',
-        Url::fromRoute('eck.entity.edit', ['eck_entity_type' => 'storage_unit', 'eck_entity_bundle' => 'storage_unit', 'eck_entity_id' => $unit->id()]))->toString();
+        Url::fromRoute('eck.entity.edit_form', ['eck_entity_type' => 'storage_unit', 'eck_entity_bundle' => 'storage_unit', 'eck_entity_id' => $unit->id()]))->toString();
       $actions .= ' ' . $edit_link;
 
       $rows[] = [
