@@ -10,7 +10,6 @@ dependencies:
     - field.field.storage_assignment.storage_assignment.field_storage_assignment_status
     - field.field.storage_assignment.storage_assignment.field_storage_end_date
     - field.field.storage_assignment.storage_assignment.field_storage_issue_note
-    - field.field.storage_assignment.storage_assignment.field_storage_issue_open
     - field.field.storage_assignment.storage_assignment.field_storage_price_snapshot
     - field.field.storage_assignment.storage_assignment.field_storage_start_date
     - field.field.storage_assignment.storage_assignment.field_storage_stripe_sub_id
@@ -66,16 +65,6 @@ content:
     settings: {  }
     third_party_settings: {  }
     weight: 8
-    region: content
-  field_storage_issue_open:
-    type: boolean
-    label: above
-    settings:
-      format: default
-      format_custom_false: ''
-      format_custom_true: ''
-    third_party_settings: {  }
-    weight: 7
     region: content
   field_storage_price_snapshot:
     type: number_decimal
