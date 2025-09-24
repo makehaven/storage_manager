@@ -1,6 +1,6 @@
 uuid: 45c90ed6-9752-4c7d-b102-98353a52b078
 langcode: en
-status: false
+status: true
 dependencies:
   module:
     - eck
@@ -12,4 +12,4 @@ label: storage_unit
 uid: false
 created: true
 changed: true
-title: 'field_storage_unit_id'
+title: false

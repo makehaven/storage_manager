@@ -61,5 +61,3 @@ content:
     third_party_settings: {  }
 hidden:
   uuid: true
-  field_storage_x: true
-  field_storage_y: true
