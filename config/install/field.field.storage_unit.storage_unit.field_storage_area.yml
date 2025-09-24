@@ -19,7 +19,8 @@ translatable: false
 default_value: {  }
 default_value_callback: ''
 settings:
-  handler: eca
+  handler: 'default:taxonomy_term'
   handler_settings:
-    field_name: field_storage_area
+    target_bundles:
+      storage_area: storage_area
 field_type: entity_reference

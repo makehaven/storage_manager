@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+id: storage_unit.storage_unit.name
+field_name: name
+entity_type: storage_unit
+bundle: storage_unit
+label: 'Title'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string
