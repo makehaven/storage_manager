@@ -1,6 +1,7 @@
 <?php
 
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\EntityStorageException;
 
 /**
  * @file
@@ -11,21 +12,21 @@ use Drupal\Core\Entity\EntityInterface;
  * Implements hook_entity_presave().
  */
 function storage_manager_entity_presave(EntityInterface $entity) {
-  if ($entity->getEntityTypeId() === 'storage_assignment') {
-    // When an assignment is being created or updated, if the status is not
-    // "Active", then we don't need to do anything.
-    $status_field = 'field_storage_assignment_status';
-    if (!$entity->hasField($status_field) || $entity->get($status_field)->value !== 'Active') {
-      return;
-    }
+  if ($entity->getEntityTypeId() === 'storage_unit') {
+    $id = $entity->get('field_storage_unit_id')->value;
+    if ($id) {
+      $query = \Drupal::entityQuery('storage_unit')
+        ->condition('field_storage_unit_id', $id)
+        ->accessCheck(FALSE)
+        ->range(0, 1);
 
-    // If some *other* Active assignment exists for this unit, block.
-    $unit_field = 'field_storage_unit';
-    if ($entity->hasField($unit_field) && ($unit = $entity->get($unit_field)->entity)) {
-      /** @var \Drupal\storage_manager\Service\AssignmentGuard $guard */
-      $guard = \Drupal::service('storage_manager.assignment_guard');
-      if ($entity->isNew() && $guard->unitHasActiveAssignment($unit->id())) {
-        throw new \RuntimeException('This storage unit already has an active assignment.');
+      // Exclude self when updating.
+      if (!$entity->isNew()) {
+        $query->condition('id', $entity->id(), '<>');
+      }
+      $exists = $query->execute();
+      if ($exists) {
+        throw new EntityStorageException(t('Unit ID %id is already in use.', ['%id' => $id]));
       }
     }
   }

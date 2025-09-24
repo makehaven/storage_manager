@@ -1,58 +1,15 @@
 storage_manager.dashboard:
   path: '/admin/storage'
   defaults:
+    _title: 'Storage Manager'
     _controller: '\Drupal\storage_manager\Controller\DashboardController::view'
-    _title: 'Storage Dashboard'
   requirements:
-    _permission: 'administer storage units'
+    _permission: 'administer site configuration'
 
-storage_manager.assignment_history:
+storage_manager.history:
   path: '/admin/storage/history'
   defaults:
-    _controller: '\Drupal\storage_manager\Controller\DashboardController::history'
     _title: 'Assignment History'
+    _controller: '\Drupal\storage_manager\Controller\DashboardController::history'
   requirements:
-    _permission: 'administer storage units'
-
-storage_manager.assign_form:
-  path: '/admin/storage/unit/{unit}/assign'
-  defaults:
-    _form: '\Drupal\storage_manager\Form\AssignForm'
-    _title: 'Assign Storage'
-  requirements:
-    _permission: 'manage storage'
-  options:
-    parameters:
-      unit:
-        type: entity:storage_unit
-
-storage_manager.release_form:
-  path: '/admin/storage/unit/{unit}/release'
-  defaults:
-    _form: '\Drupal\storage_manager\Form\ReleaseForm'
-    _title: 'Release Storage'
-  requirements:
-    _permission: 'manage storage'
-  options:
-    parameters:
-      unit:
-        type: entity:storage_unit
-
-storage_manager.edit_assignment_form:
-  path: '/admin/storage/assignment/{assignment}/edit'
-  defaults:
-    _form: '\Drupal\storage_manager\Form\EditAssignmentForm'
-    _title: 'Edit Assignment'
-  requirements:
-    _permission: 'manage storage'
-  options:
-    parameters:
-      assignment:
-        type: entity:storage_assignment
-
-storage_manager.webhook:
-  path: '/storage/stripe/webhook'
-  defaults:
-    _controller: '\Drupal\storage_manager\Controller\WebhookController::handle'
-  requirements:
-    _permission: 'access content'
+    _permission: 'administer site configuration'

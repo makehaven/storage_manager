@@ -5,137 +5,134 @@ namespace Drupal\storage_manager\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
+use Drupal\Core\Render\Markup;
+use Drupal\Core\Entity\EntityTypeInterface;
 
+/**
+ * Storage dashboard and history pages.
+ */
 class DashboardController extends ControllerBase {
 
-  public function view(): array {
-    $build = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['storage-dashboard']],
-    ];
+  /**
+   * Dashboard listing.
+   */
+  public function view() {
+    $build = [];
 
+    // Intro / how it works.
+    $intro = <<<HTML
+<p><strong>Storage Manager</strong> lets you assign members to storage units.</p>
+<ul>
+  <li><strong>Areas</strong> = physical zones (e.g., Basement Cages, Craft Room Lockers).</li>
+  <li><strong>Types</strong> = unit styles/sizes (e.g., Cage, Locker, Shelf).</li>
+  <li><strong>Unit ID</strong> is the visible identifier we use on labels and in the UI.</li>
+</ul>
+HTML;
     $build['intro'] = [
-      '#markup' => $this->t('<p>This dashboard provides an overview of all storage units. "Areas" are the physical locations of the units, and "Types" are the different sizes or kinds of units available.</p>'),
-      '#weight' => -20,
-    ];
-
-    $build['taxonomy_links'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['taxonomy-links']],
-      '#weight' => -10,
+      '#attributes' => ['class' => ['storage-manager-intro']],
+      'text' => ['#markup' => Markup::create($intro)],
+      'history_link' => Link::fromTextAndUrl(
+        $this->t('View Assignment History'),
+        Url::fromRoute('storage_manager.history')
+      )->toRenderable(),
+      '#prefix' => '<div class="mb-4">',
+      '#suffix' => '</div>',
     ];
 
-    $build['taxonomy_links']['storage_area'] = [
-      '#type' => 'link',
-      '#title' => $this->t('Manage Storage Areas'),
-      '#url' => Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area']),
-      '#attributes' => ['class' => ['button', 'button--primary']],
-    ];
-
-    $build['taxonomy_links']['storage_type'] = [
-      '#type' => 'link',
-      '#title' => $this->t('Manage Storage Types'),
-      '#url' => Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type']),
-      '#attributes' => ['class' => ['button', 'button--primary']],
-    ];
-
-    $build['add_unit_link'] = [
-      '#type' => 'link',
-      '#title' => $this->t('Add Storage Unit'),
-      '#url' => Url::fromRoute('eck.entity.add', ['eck_entity_type' => 'storage_unit', 'eck_entity_bundle' => 'storage_unit']),
-      '#attributes' => ['class' => ['button', 'button--action']],
-      '#weight' => -9,
-    ];
-
-    $build['assignment_history_link'] = [
-      '#type' => 'link',
-      '#title' => $this->t('View Assignment History'),
-      '#url' => Url::fromRoute('storage_manager.assignment_history'),
-      '#attributes' => ['class' => ['button']],
-      '#weight' => -8,
-    ];
-
-    $u_storage = $this->entityTypeManager()->getStorage('storage_unit');
-    $ids = $u_storage->getQuery()->accessCheck(FALSE)->execute();
-    $units = $u_storage->loadMultiple($ids);
+    // Load units.
+    $unit_storage = $this->entityTypeManager()->getStorage('storage_unit');
+    $units = $unit_storage->loadMultiple();
 
     $rows = [];
     foreach ($units as $unit) {
-      $status = $unit->get('field_storage_status')->value;
-      $name = $unit->label();
+      // Show Unit ID (field) instead of title().
+      $unit_id = $unit->get('field_storage_unit_id')->value ?: $this->t('—');
 
-      $assign_link = Link::fromTextAndUrl('Assign',
-        Url::fromRoute('storage_manager.assign_form', ['unit' => $unit->id()]))->toString();
+      // Build Edit link for the unit.
+      $unit_edit = Link::fromTextAndUrl(
+        $this->t('Edit Unit'),
+        Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()])
+      )->toString();
 
-      $release_link = Link::fromTextAndUrl('Release',
-        Url::fromRoute('storage_manager.release_form', ['unit' => $unit->id()]))->toString();
+      // Current assignment, if any.
+      $current_assignment = $unit->get('field_current_assignment')->entity ?? NULL;
+      $assignment_text = $this->t('Available');
+      $assignment_ops = '';
 
-      // Show “Release” only if occupied.
-      if ($status === 'Occupied') {
-        $assignment_id = \Drupal::entityQuery('storage_assignment')
-          ->condition('field_storage_unit', $unit->id())
-          ->condition('field_storage_assignment_status', 'Active')
-          ->accessCheck(FALSE)
-          ->execute();
-        $assignment_id = reset($assignment_id);
-        $edit_assignment_link = Link::fromTextAndUrl('Edit Assignment',
-          Url::fromRoute('storage_manager.edit_assignment_form', ['assignment' => $assignment_id]))->toString();
-        $actions = $release_link . ' ' . $edit_assignment_link;
-      } else {
-        $actions = $assign_link;
+      if ($current_assignment) {
+        $assignee = $current_assignment->get('field_assigned_user')->entity;
+        $assignee_name = $assignee ? $assignee->label() : $this->t('Unknown user');
+        $assignment_text = $this->t('Assigned to @name', ['@name' => $assignee_name]);
+
+        // “Edit assignment” uses the assignment's entity edit route.
+        $assignment_ops = Link::fromTextAndUrl(
+          $this->t('Edit Assignment'),
+          Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $current_assignment->id()])
+        )->toString();
       }
 
-      $edit_link = Link::fromTextAndUrl('Edit',
-        Url::fromRoute('eck.entity.edit_form', ['eck_entity_type' => 'storage_unit', 'eck_entity_bundle' => 'storage_unit', 'eck_entity_id' => $unit->id()]))->toString();
-      $actions .= ' ' . $edit_link;
-
       $rows[] = [
-        $name,
-        $status,
-        $unit->get('field_storage_area')->entity?->label() ?? '-',
-        $unit->get('field_storage_type')->entity?->label() ?? '-',
-        $actions,
+        $unit_id,
+        $unit->get('field_storage_area')->entity?->label() ?? $this->t('—'),
+        $unit->get('field_storage_type')->entity?->label() ?? $this->t('—'),
+        ['data' => ['#markup' => $assignment_text]],
+        ['data' => ['#markup' => $unit_edit . ($assignment_ops ? ' | ' . $assignment_ops : '')]],
       ];
     }
 
     $build['table'] = [
       '#type' => 'table',
-      '#header' => ['Unit', 'Status', 'Area', 'Type', 'Action'],
+      '#header' => [
+        $this->t('Unit ID'),
+        $this->t('Area'),
+        $this->t('Type'),
+        $this->t('Status'),
+        $this->t('Actions'),
+      ],
       '#rows' => $rows,
-      '#empty' => $this->t('No units found.'),
+      '#empty' => $this->t('No storage units found.'),
     ];
 
     return $build;
   }
 
-  public function history(): array {
-    $build = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['storage-history']],
-    ];
-
-    $a_storage = $this->entityTypeManager()->getStorage('storage_assignment');
-    $ids = $a_storage->getQuery()->accessCheck(FALSE)->execute();
-    $assignments = $a_storage->loadMultiple($ids);
+  /**
+   * Assignment history page.
+   */
+  public function history() {
+    $storage = $this->entityTypeManager()->getStorage('storage_assignment');
+    $assignments = $storage->loadMultiple();
 
     $rows = [];
-    foreach ($assignments as $assignment) {
+    foreach ($assignments as $a) {
+      $unit = $a->get('field_storage_unit')->entity;
+      $user = $a->get('field_assigned_user')->entity;
+      $start = $a->get('field_start')->value ? date('Y-m-d', (int) $a->get('field_start')->value) : '—';
+      $end = $a->get('field_end')->value ? date('Y-m-d', (int) $a->get('field_end')->value) : '—';
+      $note = $a->get('field_storage_issue_note')->value ?? '';
+
       $rows[] = [
-        $assignment->get('field_storage_unit')->entity?->label() ?? '-',
-        $assignment->get('field_storage_user')->entity?->label() ?? '-',
-        $assignment->get('field_storage_start_date')->value,
-        $assignment->get('field_storage_end_date')->value,
-        $assignment->get('field_storage_assignment_status')->value,
+        $unit?->get('field_storage_unit_id')->value ?? '—',
+        $user?->label() ?? '—',
+        $start,
+        $end,
+        $note,
       ];
     }
 
-    $build['table'] = [
+    return [
       '#type' => 'table',
-      '#header' => ['Unit', 'User', 'Start Date', 'End Date', 'Status'],
+      '#header' => [
+        $this->t('Unit ID'),
+        $this->t('Member'),
+        $this->t('Start'),
+        $this->t('Release'),
+        $this->t('Notes'),
+      ],
       '#rows' => $rows,
       '#empty' => $this->t('No assignments found.'),
     ];
-
-    return $build;
   }
+
 }
