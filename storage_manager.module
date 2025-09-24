@@ -81,3 +81,10 @@ function storage_manager_entity_insert(EntityInterface $entity) {
     }
   }
 }
+
+/**
+ * Implements hook_entity_type_build().
+ */
+function storage_manager_entity_type_build(array &$entity_types) {
+  // No debug output. Leave empty unless adding entity tweaks.
+}
