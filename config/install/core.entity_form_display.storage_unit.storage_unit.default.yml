@@ -10,8 +10,6 @@ dependencies:
     - field.field.storage_unit.storage_unit.field_storage_area
     - field.field.storage_unit.storage_unit.field_storage_note
     - field.field.storage_unit.storage_unit.field_storage_status
-    - field.field.storage_unit.storage_unit.field_storage_x
-    - field.field.storage_unit.storage_unit.field_storage_y
     - field.field.storage_unit.storage_unit.field_storage_type
     - field.field.storage_unit.storage_unit.field_storage_unit_id
 id: storage_unit.storage_unit.default
@@ -58,20 +56,6 @@ content:
     weight: 11
     region: content
     settings: {  }
-    third_party_settings: {  }
-  field_storage_x:
-    type: number
-    weight: 14
-    region: content
-    settings:
-      placeholder: ''
-    third_party_settings: {  }
-  field_storage_y:
-    type: number
-    weight: 15
-    region: content
-    settings:
-      placeholder: ''
     third_party_settings: {  }
 hidden:
   uuid: true
