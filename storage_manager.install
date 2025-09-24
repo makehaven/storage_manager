@@ -38,7 +38,7 @@ function storage_manager_update_10001() {
  */
 function _storage_manager_seed_storage_areas() {
   $vid = 'storage_area';
-  $names = ['Woodshop', 'Metalshop', 'Studio', 'CNC Room'];
+  $names = ['Metalshop', 'Studio', 'CNC Room'];
   foreach ($names as $name) {
     $exists = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->getQuery()
       ->condition('vid', $vid)

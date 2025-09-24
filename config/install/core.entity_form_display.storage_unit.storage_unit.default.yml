@@ -59,19 +59,5 @@ content:
     region: content
     settings: {  }
     third_party_settings: {  }
-  field_storage_x:
-    type: number
-    weight: 14
-    region: content
-    settings:
-      placeholder: ''
-    third_party_settings: {  }
-  field_storage_y:
-    type: number
-    weight: 15
-    region: content
-    settings:
-      placeholder: ''
-    third_party_settings: {  }
 hidden:
   uuid: true

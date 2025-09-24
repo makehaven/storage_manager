@@ -45,23 +45,8 @@ class AssignForm extends FormBase {
     $form['bill_via_stripe'] = [
       '#type' => 'checkbox',
       '#title' => 'Create Stripe subscription (optional)',
+      '#description' => $this->t('This feature is not yet implemented. Stripe integration can be configured in the future.'),
       '#default_value' => 0,
-    ];
-
-    $form['issue_open'] = [
-      '#type' => 'checkbox',
-      '#title' => 'Flag issue on creation',
-      '#default_value' => 0,
-    ];
-
-    $form['issue_note'] = [
-      '#type' => 'textarea',
-      '#title' => 'Issue note',
-      '#states' => [
-        'visible' => [
-          ':input[name="issue_open"]' => ['checked' => TRUE],
-        ],
-      ],
     ];
 
     $form['actions']['submit'] = [
@@ -101,8 +86,6 @@ class AssignForm extends FormBase {
       'field_storage_start_date' => $form_state->getValue('start_date'),
       'field_storage_assignment_status' => 'Active',
       'field_storage_price_snapshot' => $price_snapshot,
-      'field_storage_issue_open' => $form_state->getValue('issue_open') ? 1 : 0,
-      'field_storage_issue_note' => $form_state->getValue('issue_note'),
     ]);
     $assignment->save();
 

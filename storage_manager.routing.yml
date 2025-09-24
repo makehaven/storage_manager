@@ -1,10 +1,18 @@
 storage_manager.dashboard:
-  path: '/admin/storage/dashboard'
+  path: '/admin/storage'
   defaults:
     _controller: '\Drupal\storage_manager\Controller\DashboardController::view'
     _title: 'Storage Dashboard'
   requirements:
-    _permission: 'manage storage'
+    _permission: 'administer storage units'
+
+storage_manager.assignment_history:
+  path: '/admin/storage/history'
+  defaults:
+    _controller: '\Drupal\storage_manager\Controller\DashboardController::history'
+    _title: 'Assignment History'
+  requirements:
+    _permission: 'administer storage units'
 
 storage_manager.assign_form:
   path: '/admin/storage/unit/{unit}/assign'
@@ -30,9 +38,21 @@ storage_manager.release_form:
       unit:
         type: entity:storage_unit
 
-storage_manager.webhook:  # (disabled until you add Stripe secret)
+storage_manager.edit_assignment_form:
+  path: '/admin/storage/assignment/{assignment}/edit'
+  defaults:
+    _form: '\Drupal\storage_manager\Form\EditAssignmentForm'
+    _title: 'Edit Assignment'
+  requirements:
+    _permission: 'manage storage'
+  options:
+    parameters:
+      assignment:
+        type: entity:storage_assignment
+
+storage_manager.webhook:
   path: '/storage/stripe/webhook'
   defaults:
     _controller: '\Drupal\storage_manager\Controller\WebhookController::handle'
   requirements:
-    _permission: 'access content'  # use a secret header for verification
+    _permission: 'access content'
