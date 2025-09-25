@@ -6,7 +6,6 @@ package: MakeHaven
 dependencies:
   - eck:eck
   - drupal:taxonomy
-  - base_field_override:base_field_override
   - drupal:user
   - drupal:views
   - drupal:field
