@@ -2,6 +2,7 @@ langcode: en
 status: true
 dependencies:
   module:
+    - base_field_override
     - eck
 id: storage_unit.storage_unit.name
 field_name: name
