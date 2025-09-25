@@ -38,6 +38,10 @@ function storage_manager_entity_presave(EntityInterface $entity) {
 function storage_manager_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
   if ($form_id == 'storage_unit_storage_unit_add' || $form_id == 'storage_unit_storage_unit_edit') {
     $form['#validate'][] = '_storage_manager_form_validate_unique_unit_id';
+    if ($form_id == 'storage_unit_storage_unit_add') {
+      // Add our custom submit handler to the form.
+      $form['actions']['submit']['#submit'][] = '_storage_manager_add_form_submit_redirect';
+    }
   }
 }
 
@@ -64,10 +68,10 @@ function _storage_manager_form_validate_unique_unit_id(&$form, \Drupal\Core\Form
 }
 
 /**
- * Implements hook_entity_type_build().
+ * Custom submit handler to redirect after adding a storage unit.
  */
-function storage_manager_entity_type_build(array &$entity_types) {
-  \Drupal::logger('storage_manager')->notice('<pre>' . print_r(array_keys($entity_types), TRUE) . '</pre>');
+function _storage_manager_add_form_submit_redirect(array &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+  $form_state->setRedirect('storage_manager.dashboard');
 }
 
 /**

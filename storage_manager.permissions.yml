@@ -2,3 +2,7 @@ manage storage:
   title: 'Manage storage units and assignments'
   description: 'Assign/release storage and resolve issues'
   restrict: true
+
+'claim or release own storage':
+  title: 'Claim a vacant storage unit or release your own'
+  description: 'Allows users to assign themselves to an available unit or release a unit they currently occupy.'

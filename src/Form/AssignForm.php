@@ -28,12 +28,27 @@ class AssignForm extends FormBase {
       '#value' => $unit->id(),
     ];
 
-    $form['user'] = [
-      '#type' => 'entity_autocomplete',
-      '#title' => 'Member',
-      '#target_type' => 'user',
-      '#required' => TRUE,
-    ];
+    $account = $this->currentUser();
+    // If the user is not an admin, they can only claim the unit for themselves.
+    if (!$account->hasPermission('manage storage')) {
+      $form['user_info'] = [
+        '#markup' => $this->t('<p>You are about to claim this storage unit for yourself.</p>'),
+      ];
+      // Hide the user field and set its value to the current user.
+      $form['user'] = [
+        '#type' => 'value',
+        '#value' => $account->id(),
+      ];
+    }
+    else {
+      // Admins can assign the unit to any user.
+      $form['user'] = [
+        '#type' => 'entity_autocomplete',
+        '#title' => 'Member',
+        '#target_type' => 'user',
+        '#required' => TRUE,
+      ];
+    }
 
     $form['start_date'] = [
       '#type' => 'date',
