@@ -2,8 +2,10 @@ langcode: en
 status: true
 dependencies:
   module:
-    - base_field_override
     - eck
+  config:
+    - eck.eck_entity_type.storage_unit
+    - eck.eck_type.storage_unit.storage_unit
 id: storage_unit.storage_unit.name
 field_name: name
 entity_type: storage_unit
@@ -12,7 +14,7 @@ label: 'Title'
 description: ''
 required: false
 translatable: false
-default_value: {  }
+default_value: { }
 default_value_callback: ''
-settings: {  }
+settings: { }
 field_type: string
