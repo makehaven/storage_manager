@@ -2,3 +2,8 @@ map:
   css:
     theme:
       css/storage-map.css: {}
+
+dashboard:
+  css:
+    theme:
+      css/storage_manager.css: {}
