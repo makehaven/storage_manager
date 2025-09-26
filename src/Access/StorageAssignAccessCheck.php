@@ -21,8 +21,24 @@ class StorageAssignAccessCheck implements AccessInterface {
    *   The access result.
    */
   public function access(AccountInterface $account) {
-    // Check if the user has either the admin permission or the self-service permission.
-    return AccessResult::allowedIfHasPermissions($account, ['manage storage', 'claim or release own storage'], 'OR');
+    // User 1 is the super user and should always have access.
+    // The result should not be cached for user 1.
+    if ((int) $account->id() === 1) {
+      return AccessResult::allowed()->setCacheable(FALSE);
+    }
+
+    // Check for the administrative permission first.
+    if ($account->hasPermission('manage storage')) {
+      return AccessResult::allowed();
+    }
+
+    // Then check for the self-service permission.
+    if ($account->hasPermission('claim or release own storage')) {
+      return AccessResult::allowed();
+    }
+
+    // If none of the above, deny access.
+    return AccessResult::neutral();
   }
 
 }

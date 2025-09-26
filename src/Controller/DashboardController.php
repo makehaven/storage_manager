@@ -148,9 +148,9 @@ class DashboardController extends ControllerBase {
     $rows = [];
     foreach ($assignments as $a) {
       $unit = $a->get('field_storage_unit')->entity;
-      $user = $a->get('field_assigned_user')->entity;
-      $start = $a->get('field_start')->value ? date('Y-m-d', (int) $a->get('field_start')->value) : '—';
-      $end = $a->get('field_end')->value ? date('Y-m-d', (int) $a->get('field_end')->value) : '—';
+      $user = $a->get('field_storage_user')->entity;
+      $start = $a->get('field_storage_start_date')->value ? date('Y-m-d', strtotime($a->get('field_storage_start_date')->value)) : '—';
+      $end = $a->get('field_storage_end_date')->value ? date('Y-m-d', strtotime($a->get('field_storage_end_date')->value)) : '—';
       $note = $a->get('field_storage_issue_note')->value ?? '';
 
       $rows[] = [
