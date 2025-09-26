@@ -4,6 +4,7 @@ status: true
 dependencies:
   config:
     - eck.eck_entity_type.storage_unit
+    - taxonomy.vocabulary.storage_area
   enforced:
     module:
       - storage_manager
