@@ -7,6 +7,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\storage_manager\Service\AssignmentGuard;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class AssignForm extends FormBase {
 
@@ -23,6 +24,11 @@ class AssignForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state, $unit = NULL): array {
+    // A unit can only be assigned if it is currently vacant.
+    if ($unit->get('field_storage_status')->value !== 'Vacant') {
+      throw new AccessDeniedHttpException('This unit is not available for assignment.');
+    }
+
     $form['unit_id'] = [
       '#type' => 'value',
       '#value' => $unit->id(),

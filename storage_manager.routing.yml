@@ -20,7 +20,7 @@ storage_manager.assign_form:
     _form: '\Drupal\storage_manager\Form\AssignForm'
     _title: 'Assign Storage'
   requirements:
-    _storage_manager_assign_access: 'TRUE'
+    _permission: 'claim or release own storage'
   options:
     parameters:
       unit:
@@ -32,7 +32,7 @@ storage_manager.release_form:
     _form: '\Drupal\storage_manager\Form\ReleaseForm'
     _title: 'Release Storage'
   requirements:
-    _storage_manager_assign_access: 'TRUE'
+    _permission: 'claim or release own storage'
   options:
     parameters:
       unit:

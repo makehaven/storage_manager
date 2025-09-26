@@ -20,6 +20,11 @@ class DashboardController extends ControllerBase {
     $build = [
       '#type' => 'container',
       '#attributes' => ['class' => ['storage-dashboard']],
+      '#attached' => [
+        'library' => [
+          'storage_manager/dashboard',
+        ],
+      ],
     ];
 
     // Top buttons: manage vocabularies and add unit.
@@ -70,7 +75,7 @@ class DashboardController extends ControllerBase {
     // Load all active assignments, keyed by their unit ID for efficiency.
     $assignment_storage = $this->entityTypeManager()->getStorage('storage_assignment');
     $assignment_ids = $assignment_storage->getQuery()
-      ->condition('field_storage_end_date', NULL, 'IS NULL')
+      ->condition('field_storage_assignment_status', 'Active')
       ->accessCheck(FALSE)
       ->execute();
     $active_assignments = $assignment_storage->loadMultiple($assignment_ids);

@@ -28,7 +28,13 @@ class ReleaseForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state, $unit = NULL): array {
+    // A unit can only be released if it is currently occupied.
+    if ($unit->get('field_storage_status')->value !== 'Occupied') {
+      throw new AccessDeniedHttpException('This unit is not occupied and cannot be released.');
+    }
+
     $account = $this->currentUser();
+    // If the user is not an admin, they must be the one who the unit is assigned to.
     if (!$account->hasPermission('manage storage')) {
       $a_storage = $this->entityTypeManager->getStorage('storage_assignment');
       $ids = $a_storage->getQuery()
@@ -39,7 +45,7 @@ class ReleaseForm extends FormBase {
         ->execute();
 
       if (empty($ids)) {
-        throw new AccessDeniedHttpException();
+        throw new AccessDeniedHttpException('You do not have permission to release this unit as it is not assigned to you.');
       }
     }
 
