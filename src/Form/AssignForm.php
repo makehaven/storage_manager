@@ -24,9 +24,9 @@ class AssignForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state, $unit = NULL): array {
-    // A unit can only be assigned if it is currently vacant.
-    if ($unit->get('field_storage_status')->value !== 'Vacant') {
-      throw new AccessDeniedHttpException('This unit is not available for assignment.');
+    // A unit can only be assigned if it is not currently occupied.
+    if ($unit->get('field_storage_status')->value === 'Occupied') {
+      throw new AccessDeniedHttpException('This unit is already occupied and cannot be assigned.');
     }
 
     $form['unit_id'] = [
