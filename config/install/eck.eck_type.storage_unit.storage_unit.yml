@@ -1,0 +1,10 @@
+uuid: 6a0c2f9c-6a0c-4d3c-8b8e-1e1e1e1e1e1e
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_unit
+id: storage_unit.storage_unit
+name: 'Storage Unit'
+description: 'Default bundle for Storage Unit entities.'
+eck_entity_type: storage_unit

@@ -3,9 +3,6 @@ status: true
 dependencies:
   config:
     - taxonomy.vocabulary.storage_type
-  enforced:
-    module:
-      - storage_manager
   module:
     - core
 id: taxonomy_term.field_monthly_price

@@ -1,9 +1,6 @@
 langcode: en
 status: true
 dependencies:
-  enforced:
-    module:
-      - storage_manager
   config:
     - eck.eck_type.storage_unit.storage_unit
     - field.storage.storage_unit.field_storage_type

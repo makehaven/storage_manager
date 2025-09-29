@@ -1,0 +1,10 @@
+uuid: 5f9b3e3d-5b3c-4d3c-8b8e-1e1e1e1e1e1e
+langcode: en
+status: true
+id: storage_assignment
+label: 'Storage Assignment'
+description: 'Represents the assignment of a storage unit to a user.'
+created: true
+changed: true
+uid: false
+title: false

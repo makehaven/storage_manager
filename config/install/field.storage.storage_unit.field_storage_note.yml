@@ -4,9 +4,6 @@ status: true
 dependencies:
   config:
     - eck.eck_entity_type.storage_unit
-  enforced:
-    module:
-      - storage_manager
   module:
     - core
 id: storage_unit.field_storage_note

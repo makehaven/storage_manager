@@ -1,0 +1,10 @@
+uuid: 4e8c1e8e-8f5c-4d3c-8b8e-1e1e1e1e1e1e
+langcode: en
+status: true
+id: storage_unit
+label: 'Storage Unit'
+description: 'Represents a physical storage unit that can be assigned.'
+created: true
+changed: true
+uid: true
+title: false

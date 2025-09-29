@@ -2,9 +2,6 @@ uuid: 5cb82e1b-221a-42d5-a81e-3652c99404da
 langcode: en
 status: true
 dependencies:
-  enforced:
-    module:
-      - storage_manager
   config:
     - eck.eck_type.storage_unit.storage_unit
     - field.field.storage_unit.storage_unit.field_storage_area
