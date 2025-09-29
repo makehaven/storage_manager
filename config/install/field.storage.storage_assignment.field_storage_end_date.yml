@@ -4,9 +4,6 @@ status: true
 dependencies:
   config:
     - eck.eck_entity_type.storage_assignment
-  enforced:
-    module:
-      - storage_manager
   module:
     - datetime
 id: storage_assignment.field_storage_end_date

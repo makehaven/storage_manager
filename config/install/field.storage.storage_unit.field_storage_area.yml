@@ -5,9 +5,6 @@ dependencies:
   config:
     - eck.eck_entity_type.storage_unit
     - taxonomy.vocabulary.storage_area
-  enforced:
-    module:
-      - storage_manager
   module:
     - core
 id: storage_unit.field_storage_area

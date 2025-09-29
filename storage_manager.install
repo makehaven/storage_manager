@@ -22,6 +22,7 @@ function storage_manager_install() {
   _storage_manager_seed_storage_types();
 }
 
+
 /**
  * Implements hook_update_N().
  *

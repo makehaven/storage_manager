@@ -1,12 +1,10 @@
-uuid: 149b5470-6f85-47e1-ad62-18baaff79788
+uuid: 6a0c2f9c-6a0c-4d3c-8b8e-1e1e1e1e1e1e
 langcode: en
 status: true
 dependencies:
   config:
     - eck.eck_entity_type.storage_unit
-  enforced:
-    module:
-      - storage_manager
-name: storage_unit
-type: storage_unit
-description: ''
+id: storage_unit.storage_unit
+name: 'Storage Unit'
+description: 'Default bundle for Storage Unit entities.'
+eck_entity_type: storage_unit

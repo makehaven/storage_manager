@@ -1,12 +1,10 @@
-uuid: 2936eaeb-828a-46f7-afff-c8041a767d28
+uuid: 7b1d3a0d-7b1d-4d3c-8b8e-1e1e1e1e1e1e
 langcode: en
 status: true
 dependencies:
   config:
     - eck.eck_entity_type.storage_assignment
-  enforced:
-    module:
-      - storage_manager
-name: storage_assignment
-type: storage_assignment
-description: ''
+id: storage_assignment.storage_assignment
+name: 'Storage Assignment'
+description: 'Default bundle for Storage Assignment entities.'
+eck_entity_type: storage_assignment

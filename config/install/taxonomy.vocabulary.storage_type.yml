@@ -2,9 +2,6 @@ uuid: ab146d4c-8217-46bb-b16a-def5fcb9028f
 langcode: en
 status: true
 dependencies:
-  enforced:
-    module:
-      - storage_manager
 name: storage_type
 vid: storage_type
 description: 'A type of storage unit, which determines its monthly price (e.g. "Small Bin", "Large Bin").'

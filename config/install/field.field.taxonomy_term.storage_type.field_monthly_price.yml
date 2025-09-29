@@ -1,9 +1,6 @@
 langcode: en
 status: true
 dependencies:
-  enforced:
-    module:
-      - storage_manager
   config:
     - field.storage.taxonomy_term.field_monthly_price
     - taxonomy.vocabulary.storage_type
