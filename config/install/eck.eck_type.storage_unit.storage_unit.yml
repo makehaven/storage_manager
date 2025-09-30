@@ -1,8 +1,9 @@
 uuid: 9d7a8b7a-5a7e-4b1a-9a6f-1a2b3c4d5e6f
-id: storage_unit.storage_unit
-label: 'Storage Unit'
-eck_entity_type: storage_unit
-status: true
 langcode: en
-
-
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_unit
+name: 'Storage Unit'
+type: storage_unit
+description: ''

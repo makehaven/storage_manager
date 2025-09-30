@@ -22,10 +22,18 @@ class AssignForm extends FormBase {
     return 'storage_manager_assign_form';
   }
 
-  public function buildForm(array $form, FormStateInterface $form_state, $unit = NULL): array {
+  public function buildForm(array $form, FormStateInterface $form_state, $storage_unit = NULL): array {
+    if (!$storage_unit) {
+      $storage_unit = \Drupal::routeMatch()->getParameter('storage_unit');
+    }
+
+    if (!$storage_unit) {
+      throw new \InvalidArgumentException('Storage unit entity is required.');
+    }
+
     $form['unit_id'] = [
       '#type' => 'value',
-      '#value' => $unit->id(),
+      '#value' => $storage_unit->id(),
     ];
 
     $form['user'] = [
@@ -45,8 +53,9 @@ class AssignForm extends FormBase {
     $form['bill_via_stripe'] = [
       '#type' => 'checkbox',
       '#title' => 'Create Stripe subscription (optional)',
-      '#description' => $this->t('This feature is not yet implemented. Stripe integration can be configured in the future.'),
+      '#description' => $this->t('This feature is not yet implemented.'),
       '#default_value' => 0,
+      '#access' => FALSE,
     ];
 
     $form['actions']['submit'] = [
@@ -84,7 +93,7 @@ class AssignForm extends FormBase {
       'field_storage_unit' => $unit->id(),
       'field_storage_user' => $form_state->getValue('user'),
       'field_storage_start_date' => $form_state->getValue('start_date'),
-      'field_storage_assignment_status' => 'Active',
+      'field_storage_assignment_status' => 'active',
       'field_storage_price_snapshot' => $price_snapshot,
     ]);
     $assignment->save();

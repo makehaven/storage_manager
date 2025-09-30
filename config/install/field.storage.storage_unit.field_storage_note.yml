@@ -5,7 +5,7 @@ dependencies:
   config:
     - eck.eck_entity_type.storage_unit
   module:
-    - core
+    - eck
 id: storage_unit.field_storage_note
 field_name: field_storage_note
 entity_type: storage_unit

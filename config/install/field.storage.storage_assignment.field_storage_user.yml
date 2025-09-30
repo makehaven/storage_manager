@@ -5,7 +5,8 @@ dependencies:
   config:
     - eck.eck_entity_type.storage_assignment
   module:
-    - core
+    - eck
+    - user
 id: storage_assignment.field_storage_user
 field_name: field_storage_user
 entity_type: storage_assignment

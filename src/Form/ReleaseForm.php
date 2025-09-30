@@ -12,10 +12,18 @@ class ReleaseForm extends FormBase {
     return 'storage_manager_release_form';
   }
 
-  public function buildForm(array $form, FormStateInterface $form_state, $unit = NULL): array {
+  public function buildForm(array $form, FormStateInterface $form_state, $storage_unit = NULL): array {
+    if (!$storage_unit) {
+      $storage_unit = \Drupal::routeMatch()->getParameter('storage_unit');
+    }
+
+    if (!$storage_unit) {
+      throw new \InvalidArgumentException('Storage unit entity is required.');
+    }
+
     $form['unit_id'] = [
       '#type' => 'value',
-      '#value' => $unit->id(),
+      '#value' => $storage_unit->id(),
     ];
 
     $form['end_date'] = [
@@ -28,7 +36,8 @@ class ReleaseForm extends FormBase {
     $form['cancel_stripe'] = [
       '#type' => 'checkbox',
       '#title' => 'Cancel Stripe subscription (if any)',
-      '#default_value' => 1,
+      '#default_value' => 0,
+      '#access' => FALSE,
     ];
 
     $form['actions']['submit'] = [
@@ -46,13 +55,13 @@ class ReleaseForm extends FormBase {
     $a_storage = \Drupal::entityTypeManager()->getStorage('storage_assignment');
     $ids = $a_storage->getQuery()
       ->condition('field_storage_unit', $unit_id)
-      ->condition('field_storage_assignment_status', 'Active')
+      ->condition('field_storage_assignment_status', 'active')
       ->accessCheck(FALSE)
       ->execute();
 
     if ($ids) {
       $assignment = $a_storage->load(reset($ids));
-      $assignment->set('field_storage_assignment_status', 'Ended');
+      $assignment->set('field_storage_assignment_status', 'ended');
       $assignment->set('field_storage_end_date', $form_state->getValue('end_date'));
       $assignment->save();
 

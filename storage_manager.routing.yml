@@ -13,3 +13,27 @@ storage_manager.history:
     _controller: '\Drupal\storage_manager\Controller\DashboardController::history'
   requirements:
     _permission: 'manage storage'
+
+storage_manager.unit_assign:
+  path: '/admin/storage/unit/{storage_unit}/assign'
+  defaults:
+    _title: 'Assign Storage Unit'
+    _form: '\Drupal\storage_manager\Form\AssignForm'
+  requirements:
+    _permission: 'manage storage'
+  options:
+    parameters:
+      storage_unit:
+        type: entity:storage_unit
+
+storage_manager.unit_release:
+  path: '/admin/storage/unit/{storage_unit}/release'
+  defaults:
+    _title: 'Release Storage Unit'
+    _form: '\Drupal\storage_manager\Form\ReleaseForm'
+  requirements:
+    _permission: 'manage storage'
+  options:
+    parameters:
+      storage_unit:
+        type: entity:storage_unit

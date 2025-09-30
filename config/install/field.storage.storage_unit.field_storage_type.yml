@@ -4,7 +4,8 @@ dependencies:
   config:
     - eck.eck_entity_type.storage_unit
   module:
-    - core
+    - eck
+    - taxonomy
 id: storage_unit.field_storage_type
 field_name: field_storage_type
 entity_type: storage_unit

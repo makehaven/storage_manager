@@ -5,7 +5,7 @@ dependencies:
   config:
     - eck.eck_entity_type.storage_assignment
   module:
-    - core
+    - eck
 id: storage_assignment.field_storage_stripe_sub_id
 field_name: field_storage_stripe_sub_id
 entity_type: storage_assignment

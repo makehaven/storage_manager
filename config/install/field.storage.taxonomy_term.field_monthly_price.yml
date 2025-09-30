@@ -4,7 +4,7 @@ dependencies:
   config:
     - taxonomy.vocabulary.storage_type
   module:
-    - core
+    - taxonomy
 id: taxonomy_term.field_monthly_price
 field_name: field_monthly_price
 entity_type: taxonomy_term

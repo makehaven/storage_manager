@@ -21,22 +21,26 @@ class DashboardController extends ControllerBase {
     $buttons = [
       Link::fromTextAndUrl($this->t('Manage Storage Areas'),
         Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area'])
-      )->toRenderable(),
+      )->toRenderable() + ['#attributes' => ['class' => ['button']]],
       Link::fromTextAndUrl($this->t('Manage Storage Types'),
         Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type'])
-      )->toRenderable(),
-      // More reliable than eck.entity.add on some sites.
+      )->toRenderable() + ['#attributes' => ['class' => ['button']]],
       Link::fromTextAndUrl($this->t('Add Storage Unit'),
-        Url::fromRoute('entity.storage_unit.add_form', ['storage_unit' => 'storage_unit'])
-      )->toRenderable(),
+        Url::fromRoute('eck.entity.add', [
+          'eck_entity_type' => 'storage_unit',
+          'eck_entity_bundle' => 'storage_unit',
+        ], [
+          'query' => ['destination' => '/admin/storage'],
+        ])
+      )->toRenderable() + ['#attributes' => ['class' => ['button', 'button--primary']]],
       Link::fromTextAndUrl($this->t('View Assignment History'),
         Url::fromRoute('storage_manager.history')
-      )->toRenderable(),
+      )->toRenderable() + ['#attributes' => ['class' => ['button']]],
     ];
     $build['actions'] = [
       '#theme' => 'item_list',
       '#items' => $buttons,
-      '#attributes' => ['class' => ['inline', 'mb-4']],
+      '#attributes' => ['class' => ['inline', 'mb-4', 'storage-dashboard-actions']],
     ];
 
     // Load all storage units.
@@ -56,6 +60,7 @@ class DashboardController extends ControllerBase {
       $area = $unit->get('field_storage_area')->entity?->label() ?? $this->t('—');
       $type = $unit->get('field_storage_type')->entity?->label() ?? $this->t('—');
       $status = $unit->get('field_storage_status')->value ?? $this->t('—');
+      $member = $this->t('—');
 
       // Query the current (active) assignment for this unit.
       $aq = $a_storage->getQuery()->accessCheck(TRUE);
@@ -66,12 +71,30 @@ class DashboardController extends ControllerBase {
       }
       $aid = $aq->range(0, 1)->execute();
       $assignment = $aid ? $a_storage->load(reset($aid)) : NULL;
+      if ($assignment) {
+        $member = $assignment->get('field_storage_user')->entity?->label() ?? $this->t('—');
+      }
 
       $ops = [];
       // Edit Unit.
       $ops[] = Link::fromTextAndUrl($this->t('Edit Unit'),
         Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()])
       )->toString();
+
+      if ($assignment) {
+        $ops[] = Link::fromTextAndUrl($this->t('Release Unit'),
+          Url::fromRoute('storage_manager.unit_release', ['storage_unit' => $unit->id()], [
+            'query' => ['destination' => '/admin/storage'],
+          ])
+        )->toString();
+      }
+      else {
+        $ops[] = Link::fromTextAndUrl($this->t('Assign Unit'),
+          Url::fromRoute('storage_manager.unit_assign', ['storage_unit' => $unit->id()], [
+            'query' => ['destination' => '/admin/storage'],
+          ])
+        )->toString();
+      }
 
       // If there is an active assignment, offer "Edit Assignment".
       if ($assignment) {
@@ -85,6 +108,7 @@ class DashboardController extends ControllerBase {
         $area,
         $type,
         $status,
+        $member,
         ['data' => ['#markup' => implode(' | ', $ops)]],
       ];
     }
@@ -96,6 +120,7 @@ class DashboardController extends ControllerBase {
         $this->t('Area'),
         $this->t('Type'),
         $this->t('Status'),
+        $this->t('Member'),
         $this->t('Operations'),
       ],
       '#rows' => $rows,

@@ -1,8 +1,9 @@
 uuid: 0f7332c0-7f0d-4f6a-8e5a-3f8f2c9f8a11
-id: storage_assignment.storage_assignment
-label: 'Storage Assignment'
-eck_entity_type: storage_assignment
-status: true
 langcode: en
-
-
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_assignment
+name: 'Storage Assignment'
+type: storage_assignment
+description: ''
