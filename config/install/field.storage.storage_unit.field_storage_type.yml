@@ -3,7 +3,6 @@ status: true
 dependencies:
   config:
     - eck.eck_entity_type.storage_unit
-    - taxonomy.vocabulary.storage_type
   module:
     - core
 id: storage_unit.field_storage_type

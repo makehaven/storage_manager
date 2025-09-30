@@ -4,7 +4,7 @@ description: Manages storage units, assignments, and (optional) Stripe subscript
 core_version_requirement: ^10 || ^11
 package: MakeHaven
 dependencies:
-  - eck
+  - eck:eck
   - drupal:taxonomy
   - drupal:user
   - drupal:views
