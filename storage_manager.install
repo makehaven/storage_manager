@@ -16,6 +16,22 @@ function storage_manager_install() {
   // Set the initial schema version.
   \Drupal::service('keyvalue')->get('system.schema')->set('storage_manager', 10001);
 
+  $voc_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary');
+
+  $required_vocabularies = ['storage_area', 'storage_type'];
+  $missing = [];
+  foreach ($required_vocabularies as $vid) {
+    if (!$voc_storage->load($vid)) {
+      $missing[] = $vid;
+    }
+  }
+
+  // Occasionally config imports can time out on remote environments. If the
+  // vocabularies are missing, attempt to reinstall our default config.
+  if ($missing) {
+    \Drupal::service('config.installer')->installDefaultConfig('module', 'storage_manager');
+  }
+
   // Seed the storage areas.
   _storage_manager_seed_storage_areas();
   // Seed the storage types.
@@ -46,6 +62,11 @@ function storage_manager_update_10002() {
  */
 function _storage_manager_seed_storage_areas() {
   $vid = 'storage_area';
+  $vocabulary = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary')->load($vid);
+  if (!$vocabulary) {
+    \Drupal::logger('storage_manager')->error('Unable to seed storage areas because the storage_area vocabulary is missing.');
+    return;
+  }
   $names = ['Metalshop', 'Studio', 'CNC Room'];
   foreach ($names as $name) {
     $exists = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->getQuery()
@@ -65,6 +86,11 @@ function _storage_manager_seed_storage_areas() {
  */
 function _storage_manager_seed_storage_types() {
   $vid = 'storage_type';
+  $vocabulary = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary')->load($vid);
+  if (!$vocabulary) {
+    \Drupal::logger('storage_manager')->error('Unable to seed storage types because the storage_type vocabulary is missing.');
+    return;
+  }
   $names = ['Small Bin', 'Large Bin'];
   foreach ($names as $name) {
     $exists = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->getQuery()
