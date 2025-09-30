@@ -15,16 +15,27 @@ class DashboardController extends ControllerBase {
    * Dashboard listing.
    */
   public function view() {
+    $sort_field = \Drupal::request()->query->get('sort') ?: 'unit';
+    $sort_dir = strtolower(\Drupal::request()->query->get('direction') ?: 'asc') === 'desc' ? 'desc' : 'asc';
+    $current_sort = ['field' => $sort_field, 'direction' => $sort_dir];
+
     $build = [];
 
     // Header buttons.
+    $build['links'] = [
+      '#theme' => 'item_list',
+      '#items' => [
+        Link::fromTextAndUrl($this->t('Manage Storage Areas'),
+          Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area'])
+        )->toRenderable(),
+        Link::fromTextAndUrl($this->t('Manage Storage Types'),
+          Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type'])
+        )->toRenderable(),
+      ],
+      '#attributes' => ['class' => ['inline', 'mb-2', 'storage-dashboard-links']],
+    ];
+
     $buttons = [
-      Link::fromTextAndUrl($this->t('Manage Storage Areas'),
-        Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area'])
-      )->toRenderable() + ['#attributes' => ['class' => ['button']]],
-      Link::fromTextAndUrl($this->t('Manage Storage Types'),
-        Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type'])
-      )->toRenderable() + ['#attributes' => ['class' => ['button']]],
       Link::fromTextAndUrl($this->t('Add Storage Unit'),
         Url::fromRoute('eck.entity.add', [
           'eck_entity_type' => 'storage_unit',
@@ -72,7 +83,15 @@ class DashboardController extends ControllerBase {
       $aid = $aq->range(0, 1)->execute();
       $assignment = $aid ? $a_storage->load(reset($aid)) : NULL;
       if ($assignment) {
-        $member = $assignment->get('field_storage_user')->entity?->label() ?? $this->t('—');
+        $member_entity = $assignment->get('field_storage_user')->entity;
+        if ($member_entity) {
+          $member = Link::fromTextAndUrl(
+            $member_entity->label(),
+            Url::fromRoute('storage_manager.history', [], [
+              'query' => ['user' => $member_entity->id()],
+            ])
+          )->toString();
+        }
       }
 
       $ops = [];
@@ -113,16 +132,22 @@ class DashboardController extends ControllerBase {
       ];
     }
 
+    $header = [
+      $this->buildSortableHeader('unit', $this->t('Unit ID'), $current_sort),
+      $this->buildSortableHeader('area', $this->t('Area'), $current_sort),
+      $this->buildSortableHeader('type', $this->t('Type'), $current_sort),
+      $this->buildSortableHeader('status', $this->t('Status'), $current_sort),
+      $this->buildSortableHeader('member', $this->t('Member'), $current_sort),
+      $this->t('Operations'),
+    ];
+
+    if ($current_sort['field']) {
+      $rows = $this->sortRows($rows, $current_sort['field'], $current_sort['direction']);
+    }
+
     $build['table'] = [
       '#type' => 'table',
-      '#header' => [
-        $this->t('Unit ID'),
-        $this->t('Area'),
-        $this->t('Type'),
-        $this->t('Status'),
-        $this->t('Member'),
-        $this->t('Operations'),
-      ],
+      '#header' => $header,
       '#rows' => $rows,
       '#empty' => $this->t('No storage units found.'),
     ];
@@ -134,9 +159,42 @@ class DashboardController extends ControllerBase {
    * Assignment history page.
    */
   public function history() {
+    $request = \Drupal::request();
+    $filter_uid = $request->query->get('user');
+
     $storage = $this->entityTypeManager()->getStorage('storage_assignment');
-    $aids = $storage->getQuery()->accessCheck(TRUE)->sort('created', 'DESC')->execute();
+    $query = $storage->getQuery()->accessCheck(TRUE)->sort('created', 'DESC');
+    if ($filter_uid) {
+      $query->condition('field_storage_user', $filter_uid);
+    }
+    $aids = $query->execute();
     $assignments = $storage->loadMultiple($aids);
+
+    $build = [];
+
+    if ($filter_uid) {
+      $user = $this->entityTypeManager()->getStorage('user')->load($filter_uid);
+      if ($user) {
+        $clear_link = Link::fromTextAndUrl($this->t('Clear filter'), Url::fromRoute('storage_manager.history'))->toRenderable();
+        $clear_link['#attributes']['class'][] = 'button';
+        $clear_link['#attributes']['class'][] = 'button--small';
+
+        $user_link = Link::fromTextAndUrl($user->label(), Url::fromRoute('entity.user.canonical', ['user' => $user->id()]))
+          ->toRenderable();
+        $user_link['#attributes']['class'][] = 'storage-history-user-link';
+
+        $build['filter_info'] = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['messages', 'messages--status', 'storage-history-filter']],
+          'text' => [
+            '#type' => 'inline_template',
+            '#template' => 'Showing assignments for {{ user_link|raw }}.',
+            '#context' => ['user_link' => Link::fromTextAndUrl($user->label(), Url::fromRoute('entity.user.canonical', ['user' => $user->id()]))->toString()],
+          ],
+          'clear' => $clear_link,
+        ];
+      }
+    }
 
     $rows = [];
     foreach ($assignments as $a) {
@@ -166,7 +224,7 @@ class DashboardController extends ControllerBase {
       ];
     }
 
-    return [
+    $build['table'] = [
       '#type' => 'table',
       '#header' => [
         $this->t('Unit ID'),
@@ -178,6 +236,60 @@ class DashboardController extends ControllerBase {
       '#rows' => $rows,
       '#empty' => $this->t('No assignments found.'),
     ];
+
+    return $build;
+  }
+
+  /**
+   * Helper to build a sortable column header link.
+   */
+  protected function buildSortableHeader(string $key, $label, array $current): array {
+    $direction = 'asc';
+    if ($current['field'] === $key && $current['direction'] === 'asc') {
+      $direction = 'desc';
+    }
+    $url = Url::fromRoute('storage_manager.dashboard', [], [
+      'query' => ['sort' => $key, 'direction' => $direction],
+    ]);
+
+    $attributes = [];
+    if ($current['field'] === $key) {
+      $attributes['class'][] = 'is-active';
+    }
+
+    $link = Link::fromTextAndUrl($label, $url)->toRenderable();
+    if ($attributes) {
+      $link['#attributes'] = array_merge($link['#attributes'] ?? [], $attributes);
+    }
+
+    return ['data' => $link];
+  }
+
+  /**
+   * Sorts table rows client-side according to selected header.
+   */
+  protected function sortRows(array $rows, string $field, string $direction): array {
+    $index_map = [
+      'unit' => 0,
+      'area' => 1,
+      'type' => 2,
+      'status' => 3,
+      'member' => 4,
+    ];
+    if (!isset($index_map[$field])) {
+      return $rows;
+    }
+
+    $column_index = $index_map[$field];
+    usort($rows, function ($a, $b) use ($column_index, $direction) {
+      $value_a = is_array($a[$column_index]) ? (string) ($a[$column_index]['data']['#markup'] ?? '') : (string) $a[$column_index];
+      $value_b = is_array($b[$column_index]) ? (string) ($b[$column_index]['data']['#markup'] ?? '') : (string) $b[$column_index];
+
+      $result = strcasecmp($value_a, $value_b);
+      return $direction === 'desc' ? -$result : $result;
+    });
+
+    return $rows;
   }
 
 }
