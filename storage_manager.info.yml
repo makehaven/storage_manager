@@ -10,3 +10,5 @@ dependencies:
   - drupal:views
   - drupal:field
   - drupal:system
+  - drupal:datetime
+  - drupal:options

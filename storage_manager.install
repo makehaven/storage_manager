@@ -34,6 +34,14 @@ function storage_manager_update_10001() {
 }
 
 /**
+ * Ensure default configuration exists after dependency adjustments.
+ */
+function storage_manager_update_10002() {
+  \Drupal::service('config.installer')->installDefaultConfig('module', 'storage_manager');
+  return t('Reinstalled missing Storage Manager configuration.');
+}
+
+/**
  * Seed common storage areas (safe to re-run).
  */
 function _storage_manager_seed_storage_areas() {
