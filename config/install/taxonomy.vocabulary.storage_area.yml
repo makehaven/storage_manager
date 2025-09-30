@@ -1,7 +1,7 @@
 uuid: 2f50ffba-873d-45f8-acb5-d4b067fc9092
 langcode: en
 status: true
-dependencies:
+dependencies: {  }
 name: storage_area
 vid: storage_area
 description: 'A physical area where storage units are located (e.g. "Woodshop", "Metalshop").'

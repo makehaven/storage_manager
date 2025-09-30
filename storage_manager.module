@@ -67,7 +67,6 @@ function _storage_manager_form_validate_unique_unit_id(&$form, \Drupal\Core\Form
  * Implements hook_entity_type_build().
  */
 function storage_manager_entity_type_build(array &$entity_types) {
-  \Drupal::logger('storage_manager')->notice('<pre>' . print_r(array_keys($entity_types), TRUE) . '</pre>');
 }
 
 /**
