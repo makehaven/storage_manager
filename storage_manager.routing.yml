@@ -1,10 +1,10 @@
 storage_manager.dashboard:
-  path: '/admin/storage/dashboard'
+  path: '/admin/storage'
   defaults:
-    _title: 'Storage Dashboard'
+    _title: 'Storage Manager'
     _controller: '\Drupal\storage_manager\Controller\DashboardController::view'
   requirements:
-    _permission: 'manage storage'
+    _permission: 'administer site configuration'
 
 storage_manager.history:
   path: '/admin/storage/history'
@@ -12,28 +12,4 @@ storage_manager.history:
     _title: 'Assignment History'
     _controller: '\Drupal\storage_manager\Controller\DashboardController::history'
   requirements:
-    _permission: 'manage storage'
-
-storage_manager.assign_form:
-  path: '/admin/storage/unit/{unit}/assign'
-  defaults:
-    _form: '\Drupal\storage_manager\Form\AssignForm'
-    _title: 'Assign Storage'
-  requirements:
-    _permission: 'claim or release own storage'
-  options:
-    parameters:
-      unit:
-        type: entity:storage_unit
-
-storage_manager.release_form:
-  path: '/admin/storage/unit/{unit}/release'
-  defaults:
-    _form: '\Drupal\storage_manager\Form\ReleaseForm'
-    _title: 'Release Storage'
-  requirements:
-    _permission: 'claim or release own storage'
-  options:
-    parameters:
-      unit:
-        type: entity:storage_unit
+    _permission: 'administer site configuration'

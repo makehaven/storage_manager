@@ -16,128 +16,82 @@ class DashboardController extends ControllerBase {
   /**
    * Dashboard listing.
    */
-  public function view(): array {
-    $build = [
+  public function view() {
+    $build = [];
+
+    // Intro / how it works.
+    $intro = <<<HTML
+<p><strong>Storage Manager</strong> lets you assign members to storage units.</p>
+<ul>
+  <li><strong>Areas</strong> = physical zones (e.g., Basement Cages, Craft Room Lockers).</li>
+  <li><strong>Types</strong> = unit styles/sizes (e.g., Cage, Locker, Shelf).</li>
+  <li><strong>Unit ID</strong> is the visible identifier we use on labels and in the UI.</li>
+</ul>
+HTML;
+    $build['intro'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['storage-dashboard']],
-      '#attached' => [
-        'library' => [
-          'storage_manager/dashboard',
-        ],
-      ],
+      '#attributes' => ['class' => ['storage-manager-intro']],
+      'text' => ['#markup' => Markup::create($intro)],
+      'history_link' => Link::fromTextAndUrl(
+        $this->t('View Assignment History'),
+        Url::fromRoute('storage_manager.history')
+      )->toRenderable(),
+      '#prefix' => '<div class="mb-4">',
+      '#suffix' => '</div>',
     ];
 
-    // Top buttons: manage vocabularies and add unit.
-    $build['taxonomy_links'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['taxonomy-links']],
-      '#weight' => -10,
-    ];
-
-    $build['taxonomy_links']['storage_area'] = [
-      '#type' => 'link',
-      '#title' => $this->t('Manage Storage Areas'),
-      '#url' => Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area']),
-      '#attributes' => ['class' => ['button', 'button--primary']],
-    ];
-
-    $build['taxonomy_links']['storage_type'] = [
-      '#type' => 'link',
-      '#title' => $this->t('Manage Storage Types'),
-      '#url' => Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type']),
-      '#attributes' => ['class' => ['button', 'button--primary']],
-    ];
-
-    $build['add_unit_link'] = [
-      '#type' => 'link',
-      '#title' => $this->t('Add Storage Unit'),
-      '#url' => Url::fromRoute('eck.entity.add', [
-        'eck_entity_type' => 'storage_unit',
-        'eck_entity_bundle' => 'storage_unit',
-      ]),
-      '#attributes' => ['class' => ['button', 'button--action']],
-      '#weight' => -9,
-    ];
-
-    $build['history_link'] = [
-      '#type' => 'link',
-      '#title' => $this->t('View Assignment History'),
-      '#url' => Url::fromRoute('storage_manager.history'),
-      '#attributes' => ['class' => ['button']],
-      '#weight' => -8,
-    ];
-
-    // Load units and build the table.
-    $u_storage = $this->entityTypeManager()->getStorage('storage_unit');
-    $ids = $u_storage->getQuery()->accessCheck(FALSE)->execute();
-    $units = $u_storage->loadMultiple($ids);
-
-    // Load all active assignments, keyed by their unit ID for efficiency.
-    $assignment_storage = $this->entityTypeManager()->getStorage('storage_assignment');
-    $assignment_ids = $assignment_storage->getQuery()
-      ->condition('field_storage_assignment_status', 'Active')
-      ->accessCheck(FALSE)
-      ->execute();
-    $active_assignments = $assignment_storage->loadMultiple($assignment_ids);
-    $assignments_by_unit = [];
-    foreach ($active_assignments as $assignment) {
-      if ($unit_id = $assignment->get('field_storage_unit')->target_id) {
-        $assignments_by_unit[$unit_id] = $assignment;
-      }
-    }
+    // Load units.
+    $unit_storage = $this->entityTypeManager()->getStorage('storage_unit');
+    $units = $unit_storage->loadMultiple();
 
     $rows = [];
     foreach ($units as $unit) {
-      $status = $unit->get('field_storage_status')->value;
-      $name = $unit->label();
+      // Show Unit ID (field) instead of title().
+      $unit_id = $unit->get('field_storage_unit_id')->value ?: $this->t('—');
 
-      $action_items = [];
-
-      // Add "Edit Unit" link for all units.
-      $action_items[] = Link::fromTextAndUrl(
+      // Build Edit link for the unit.
+      $unit_edit = Link::fromTextAndUrl(
         $this->t('Edit Unit'),
         Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()])
       )->toString();
 
-      if ($status === 'Occupied') {
-        // For occupied units, add Release and Edit Assignment links.
-        $action_items[] = Link::fromTextAndUrl(
-          $this->t('Release'),
-          Url::fromRoute('storage_manager.release_form', ['unit' => $unit->id()])
-        )->toString();
+      // Current assignment, if any.
+      $current_assignment = $unit->get('field_current_assignment')->entity ?? NULL;
+      $assignment_text = $this->t('Available');
+      $assignment_ops = '';
 
-        if (isset($assignments_by_unit[$unit->id()])) {
-          $assignment = $assignments_by_unit[$unit->id()];
-          $action_items[] = Link::fromTextAndUrl(
-            $this->t('Edit Assignment'),
-            Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()])
-          )->toString();
-        }
-      }
-      else {
-        // For vacant units, add Assign link.
-        $action_items[] = Link::fromTextAndUrl(
-          $this->t('Assign'),
-          Url::fromRoute('storage_manager.assign_form', ['unit' => $unit->id()])
+      if ($current_assignment) {
+        $assignee = $current_assignment->get('field_assigned_user')->entity;
+        $assignee_name = $assignee ? $assignee->label() : $this->t('Unknown user');
+        $assignment_text = $this->t('Assigned to @name', ['@name' => $assignee_name]);
+
+        // “Edit assignment” uses the assignment's entity edit route.
+        $assignment_ops = Link::fromTextAndUrl(
+          $this->t('Edit Assignment'),
+          Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $current_assignment->id()])
         )->toString();
       }
-
-      $actions = implode(' | ', $action_items);
 
       $rows[] = [
-        $name,
-        $status,
-        $unit->get('field_storage_area')->entity?->label() ?? '-',
-        $unit->get('field_storage_type')->entity?->label() ?? '-',
-        ['data' => Markup::create($actions)],
+        $unit_id,
+        $unit->get('field_storage_area')->entity?->label() ?? $this->t('—'),
+        $unit->get('field_storage_type')->entity?->label() ?? $this->t('—'),
+        ['data' => ['#markup' => $assignment_text]],
+        ['data' => ['#markup' => $unit_edit . ($assignment_ops ? ' | ' . $assignment_ops : '')]],
       ];
     }
 
     $build['table'] = [
       '#type' => 'table',
-      '#header' => [$this->t('Unit'), $this->t('Status'), $this->t('Area'), $this->t('Type'), $this->t('Action')],
+      '#header' => [
+        $this->t('Unit ID'),
+        $this->t('Area'),
+        $this->t('Type'),
+        $this->t('Status'),
+        $this->t('Actions'),
+      ],
       '#rows' => $rows,
-      '#empty' => $this->t('No units found.'),
+      '#empty' => $this->t('No storage units found.'),
     ];
 
     return $build;
@@ -153,9 +107,9 @@ class DashboardController extends ControllerBase {
     $rows = [];
     foreach ($assignments as $a) {
       $unit = $a->get('field_storage_unit')->entity;
-      $user = $a->get('field_storage_user')->entity;
-      $start = $a->get('field_storage_start_date')->value ? date('Y-m-d', strtotime($a->get('field_storage_start_date')->value)) : '—';
-      $end = $a->get('field_storage_end_date')->value ? date('Y-m-d', strtotime($a->get('field_storage_end_date')->value)) : '—';
+      $user = $a->get('field_assigned_user')->entity;
+      $start = $a->get('field_start')->value ? date('Y-m-d', (int) $a->get('field_start')->value) : '—';
+      $end = $a->get('field_end')->value ? date('Y-m-d', (int) $a->get('field_end')->value) : '—';
       $note = $a->get('field_storage_issue_note')->value ?? '';
 
       $rows[] = [
