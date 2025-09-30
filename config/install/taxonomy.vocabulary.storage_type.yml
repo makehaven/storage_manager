@@ -1,8 +1,9 @@
 uuid: ab146d4c-8217-46bb-b16a-def5fcb9028f
 langcode: en
 status: true
+dependencies:
+name: storage_type
 vid: storage_type
-name: 'Storage Type'
-description: ''
+description: 'A type of storage unit, which determines its monthly price (e.g. "Small Bin", "Large Bin").'
 weight: 0
 new_revision: false
