@@ -1,8 +1,11 @@
 uuid: 941e31e1-d36f-4919-8145-1719d15187e8
 langcode: en
 status: true
+dependencies:
+  module:
+    - eck
 id: storage_assignment
-label: 'Storage Assignment'
+label: storage_assignment
 uid: true
 created: true
 changed: true

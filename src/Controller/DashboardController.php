@@ -5,8 +5,6 @@ namespace Drupal\storage_manager\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
-use Drupal\Core\Render\Markup;
-use Drupal\Core\Entity\EntityTypeInterface;
 
 /**
  * Storage dashboard and history pages.
@@ -19,65 +17,75 @@ class DashboardController extends ControllerBase {
   public function view() {
     $build = [];
 
-    // Intro / how it works.
-    $intro = <<<HTML
-<p><strong>Storage Manager</strong> lets you assign members to storage units.</p>
-<ul>
-  <li><strong>Areas</strong> = physical zones (e.g., Basement Cages, Craft Room Lockers).</li>
-  <li><strong>Types</strong> = unit styles/sizes (e.g., Cage, Locker, Shelf).</li>
-  <li><strong>Unit ID</strong> is the visible identifier we use on labels and in the UI.</li>
-</ul>
-HTML;
-    $build['intro'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['storage-manager-intro']],
-      'text' => ['#markup' => Markup::create($intro)],
-      'history_link' => Link::fromTextAndUrl(
-        $this->t('View Assignment History'),
+    // Header buttons.
+    $buttons = [
+      Link::fromTextAndUrl($this->t('Manage Storage Areas'),
+        Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area'])
+      )->toRenderable(),
+      Link::fromTextAndUrl($this->t('Manage Storage Types'),
+        Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type'])
+      )->toRenderable(),
+      // More reliable than eck.entity.add on some sites.
+      Link::fromTextAndUrl($this->t('Add Storage Unit'),
+        Url::fromRoute('entity.storage_unit.add_form', ['storage_unit' => 'storage_unit'])
+      )->toRenderable(),
+      Link::fromTextAndUrl($this->t('View Assignment History'),
         Url::fromRoute('storage_manager.history')
       )->toRenderable(),
-      '#prefix' => '<div class="mb-4">',
-      '#suffix' => '</div>',
+    ];
+    $build['actions'] = [
+      '#theme' => 'item_list',
+      '#items' => $buttons,
+      '#attributes' => ['class' => ['inline', 'mb-4']],
     ];
 
-    // Load units.
-    $unit_storage = $this->entityTypeManager()->getStorage('storage_unit');
-    $units = $unit_storage->loadMultiple();
+    // Load all storage units.
+    $u_storage = $this->entityTypeManager()->getStorage('storage_unit');
+    $uids = $u_storage->getQuery()->accessCheck(TRUE)->execute();
+    $units = $u_storage->loadMultiple($uids);
+
+    // For "active" assignment lookup.
+    $a_storage = $this->entityTypeManager()->getStorage('storage_assignment');
+    $efm = \Drupal::service('entity_field.manager');
+    $assign_defs = $efm->getFieldDefinitions('storage_assignment', 'storage_assignment');
+    $has_status = isset($assign_defs['field_storage_assignment_status']);
 
     $rows = [];
     foreach ($units as $unit) {
-      // Show Unit ID (field) instead of title().
       $unit_id = $unit->get('field_storage_unit_id')->value ?: $this->t('—');
+      $area = $unit->get('field_storage_area')->entity?->label() ?? $this->t('—');
+      $type = $unit->get('field_storage_type')->entity?->label() ?? $this->t('—');
+      $status = $unit->get('field_storage_status')->value ?? $this->t('—');
 
-      // Build Edit link for the unit.
-      $unit_edit = Link::fromTextAndUrl(
-        $this->t('Edit Unit'),
+      // Query the current (active) assignment for this unit.
+      $aq = $a_storage->getQuery()->accessCheck(TRUE);
+      $aq->condition('field_storage_unit.target_id', $unit->id());
+      if ($has_status) {
+        // Machine value is typically lowercase.
+        $aq->condition('field_storage_assignment_status', 'active');
+      }
+      $aid = $aq->range(0, 1)->execute();
+      $assignment = $aid ? $a_storage->load(reset($aid)) : NULL;
+
+      $ops = [];
+      // Edit Unit.
+      $ops[] = Link::fromTextAndUrl($this->t('Edit Unit'),
         Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()])
       )->toString();
 
-      // Current assignment, if any.
-      $current_assignment = $unit->get('field_current_assignment')->entity ?? NULL;
-      $assignment_text = $this->t('Available');
-      $assignment_ops = '';
-
-      if ($current_assignment) {
-        $assignee = $current_assignment->get('field_assigned_user')->entity;
-        $assignee_name = $assignee ? $assignee->label() : $this->t('Unknown user');
-        $assignment_text = $this->t('Assigned to @name', ['@name' => $assignee_name]);
-
-        // “Edit assignment” uses the assignment's entity edit route.
-        $assignment_ops = Link::fromTextAndUrl(
-          $this->t('Edit Assignment'),
-          Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $current_assignment->id()])
+      // If there is an active assignment, offer "Edit Assignment".
+      if ($assignment) {
+        $ops[] = Link::fromTextAndUrl($this->t('Edit Assignment'),
+          Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()])
         )->toString();
       }
 
       $rows[] = [
         $unit_id,
-        $unit->get('field_storage_area')->entity?->label() ?? $this->t('—'),
-        $unit->get('field_storage_type')->entity?->label() ?? $this->t('—'),
-        ['data' => ['#markup' => $assignment_text]],
-        ['data' => ['#markup' => $unit_edit . ($assignment_ops ? ' | ' . $assignment_ops : '')]],
+        $area,
+        $type,
+        $status,
+        ['data' => ['#markup' => implode(' | ', $ops)]],
       ];
     }
 
@@ -88,7 +96,7 @@ HTML;
         $this->t('Area'),
         $this->t('Type'),
         $this->t('Status'),
-        $this->t('Actions'),
+        $this->t('Operations'),
       ],
       '#rows' => $rows,
       '#empty' => $this->t('No storage units found.'),
@@ -102,14 +110,26 @@ HTML;
    */
   public function history() {
     $storage = $this->entityTypeManager()->getStorage('storage_assignment');
-    $assignments = $storage->loadMultiple();
+    $aids = $storage->getQuery()->accessCheck(TRUE)->sort('created', 'DESC')->execute();
+    $assignments = $storage->loadMultiple($aids);
 
     $rows = [];
     foreach ($assignments as $a) {
       $unit = $a->get('field_storage_unit')->entity;
-      $user = $a->get('field_assigned_user')->entity;
-      $start = $a->get('field_start')->value ? date('Y-m-d', (int) $a->get('field_start')->value) : '—';
-      $end = $a->get('field_end')->value ? date('Y-m-d', (int) $a->get('field_end')->value) : '—';
+      $user = $a->get('field_storage_user')->entity;
+
+      // start_date: date string (Y-m-d). end_date: datetime string.
+      $start_raw = $a->get('field_storage_start_date')->value; // e.g., '2025-09-30'
+      $end_raw = $a->get('field_storage_end_date')->value;     // e.g., '2025-09-30T12:34:00'
+
+      $start = $start_raw ?: '—';
+      if ($end_raw) {
+        $end_ts = strtotime($end_raw);
+        $end = $end_ts ? date('Y-m-d', $end_ts) : $end_raw;
+      } else {
+        $end = '—';
+      }
+
       $note = $a->get('field_storage_issue_note')->value ?? '';
 
       $rows[] = [
