@@ -1,6 +1,6 @@
 # Storage Manager
 
-Drupal 10 custom module for managing member storage units and assignments at MakeHaven.  
+Drupal 10 custom module for managing member storage units and assignments at MakeHaven.
 Provides entity types, admin UI, and hooks for Stripe subscription billing.
 
 ---
@@ -19,7 +19,7 @@ Provides entity types, admin UI, and hooks for Stripe subscription billing.
   - **Dashboard** at `/admin/storage/dashboard` with unit status and assign/release actions.
   - **Assign form**: allocate a vacant unit to a member, with optional issue flag.
   - **Release form**: end an active assignment and mark the unit vacant.
-  - **Block:** optional “Storage Map” overlay (color-coded dots placed by X/Y coords).
+  - **Block:** optional "Storage Map" overlay (color-coded dots placed by X/Y coords).
 
 - **Business rules**
   - Prevents more than one active assignment per unit.
@@ -32,6 +32,12 @@ Provides entity types, admin UI, and hooks for Stripe subscription billing.
 ## Installation
 
 1. Place this module in `web/modules/custom/storage_manager/`.
-2. Enable:
+2. Create two taxonomy vocabularies (Structure → Taxonomy) **before** enabling the module:
+   - `storage_area`
+   - `storage_type`
+   Optionally add seed terms such as "Metalshop", "Studio", "CNC Room" (areas) and "Small Bin", "Large Bin" (types).
+3. Enable the module:
    ```bash
    drush en storage_manager -y
+   ```
+   Installation will halt with an explanatory error if the required vocabularies are missing.

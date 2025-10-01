@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Config\FileStorage;
+use Drupal\Core\Extension\ModuleInstallException;
 use Drupal\taxonomy\Entity\Term;
 
 /**
@@ -16,6 +17,19 @@ use Drupal\taxonomy\Entity\Term;
 function storage_manager_install() {
   // Set the initial schema version.
   \Drupal::service('keyvalue')->get('system.schema')->set('storage_manager', 10001);
+
+  $voc_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary');
+  $required = ['storage_area', 'storage_type'];
+  $missing = [];
+  foreach ($required as $vid) {
+    if (!$voc_storage->load($vid)) {
+      $missing[] = $vid;
+    }
+  }
+
+  if ($missing) {
+    throw new ModuleInstallException(t('Storage Manager requires the vocabularies: @vocabularies. Please create them (Structure » Taxonomy) before enabling the module.', ['@vocabularies' => implode(', ', $missing)]));
+  }
 
   _storage_manager_ensure_default_config();
 
