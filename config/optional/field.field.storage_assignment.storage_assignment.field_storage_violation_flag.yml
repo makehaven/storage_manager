@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_storage_violation_flag
+id: storage_assignment.storage_assignment.field_storage_violation_flag
+field_name: field_storage_violation_flag
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Violation flag'
+description: 'Indicates whether this assignment currently has an active violation.'
+required: false
+translatable: false
+default_value: { }
+default_value_callback: ''
+settings:
+  on_label: 'Violation active'
+  off_label: 'No violation'
+field_type: boolean

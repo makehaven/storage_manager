@@ -1,0 +1,9 @@
+uuid: 9fd52c14-1f55-4624-8b81-447c72d5b5c5
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_violation
+name: 'Storage Violation'
+type: storage_violation
+description: 'Tracks violations for a storage assignment.'

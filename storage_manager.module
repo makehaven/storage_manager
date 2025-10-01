@@ -94,3 +94,13 @@ function storage_manager_entity_insert(EntityInterface $entity) {
     }
   }
 }
+
+/**
+ * Implements hook_mail().
+ */
+function storage_manager_mail($key, &$message, $params) {
+  $message['subject'] = $params['subject'] ?? '';
+  $body = $params['body'] ?? '';
+  $body = str_replace(["\r\n", "\r"], "\n", $body);
+  $message['body'] = explode("\n", $body);
+}

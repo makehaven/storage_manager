@@ -1,0 +1,22 @@
+uuid: bed7349c-cec0-4d63-b2bd-84fee26aa7d0
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_violation
+  module:
+    - options
+id: storage_violation.field_storage_vi_active
+field_name: field_storage_vi_active
+entity_type: storage_violation
+type: boolean
+settings:
+  on_label: 'Active'
+  off_label: 'Resolved'
+module: options
+locked: false
+cardinality: 1
+translatable: true
+indexes: { }
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,22 @@
+uuid: 6e2f5d61-3b09-44f1-85b7-d159ffbf2040
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_violation.storage_violation
+    - field.storage.storage_violation.field_storage_vi_start
+  module:
+    - datetime
+id: storage_violation.storage_violation.field_storage_vi_start
+field_name: field_storage_vi_start
+entity_type: storage_violation
+bundle: storage_violation
+label: 'Violation start'
+description: 'Date the violation was first recorded.'
+required: true
+translatable: false
+default_value: { }
+default_value_callback: ''
+settings:
+  display_summary: false
+field_type: datetime

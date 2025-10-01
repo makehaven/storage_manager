@@ -4,3 +4,17 @@ storage_manager.dashboard:
   route_name: storage_manager.dashboard
   parent: system.admin_config
   weight: 10
+
+storage_manager.settings:
+  title: 'Storage Manager settings'
+  description: 'Configure claim agreements and notifications for storage events.'
+  route_name: storage_manager.settings
+  parent: system.admin_config_services
+  weight: 15
+
+storage_manager.member_dashboard:
+  title: 'My Storage'
+  description: 'View or release your assigned storage.'
+  route_name: storage_manager.member_dashboard
+  menu_name: account
+  weight: 20

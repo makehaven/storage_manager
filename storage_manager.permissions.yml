@@ -2,3 +2,7 @@ manage storage:
   title: 'Manage storage units and assignments'
   description: 'Assign/release storage and resolve issues'
   restrict: true
+
+claim storage unit:
+  title: 'Claim a storage unit'
+  description: 'Allow users to self-assign vacant storage units through the claim page.'

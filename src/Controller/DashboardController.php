@@ -20,68 +20,43 @@ class DashboardController extends ControllerBase {
     $current_sort = ['field' => $sort_field, 'direction' => $sort_dir];
 
     $build = [];
+    $build['#attached']['library'][] = 'storage_manager/admin';
+    $build['hub_links'] = $this->buildHubLinks();
 
-    // Header buttons.
-    $build['links'] = [
-      '#theme' => 'item_list',
-      '#items' => [
-        Link::fromTextAndUrl($this->t('Manage Storage Areas'),
-          Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area'])
-        )->toRenderable(),
-        Link::fromTextAndUrl($this->t('Manage Storage Types'),
-          Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type'])
-        )->toRenderable(),
-      ],
-      '#attributes' => ['class' => ['inline', 'mb-2', 'storage-dashboard-links']],
-    ];
+    $unit_storage = $this->entityTypeManager()->getStorage('storage_unit');
+    $unit_ids = $unit_storage->getQuery()->accessCheck(TRUE)->execute();
+    $units = $unit_storage->loadMultiple($unit_ids);
 
-    $buttons = [
-      Link::fromTextAndUrl($this->t('Add Storage Unit'),
-        Url::fromRoute('eck.entity.add', [
-          'eck_entity_type' => 'storage_unit',
-          'eck_entity_bundle' => 'storage_unit',
-        ], [
-          'query' => ['destination' => '/admin/storage'],
-        ])
-      )->toRenderable() + ['#attributes' => ['class' => ['button', 'button--primary']]],
-      Link::fromTextAndUrl($this->t('View Assignment History'),
-        Url::fromRoute('storage_manager.history')
-      )->toRenderable() + ['#attributes' => ['class' => ['button']]],
-    ];
-    $build['actions'] = [
-      '#theme' => 'item_list',
-      '#items' => $buttons,
-      '#attributes' => ['class' => ['inline', 'mb-4', 'storage-dashboard-actions']],
-    ];
+    $assignment_storage = $this->entityTypeManager()->getStorage('storage_assignment');
+    $field_manager = \Drupal::service('entity_field.manager');
+    $assignment_field_defs = $field_manager->getFieldDefinitions('storage_assignment', 'storage_assignment');
+    $has_status = isset($assignment_field_defs['field_storage_assignment_status']);
 
-    // Load all storage units.
-    $u_storage = $this->entityTypeManager()->getStorage('storage_unit');
-    $uids = $u_storage->getQuery()->accessCheck(TRUE)->execute();
-    $units = $u_storage->loadMultiple($uids);
-
-    // For "active" assignment lookup.
-    $a_storage = $this->entityTypeManager()->getStorage('storage_assignment');
-    $efm = \Drupal::service('entity_field.manager');
-    $assign_defs = $efm->getFieldDefinitions('storage_assignment', 'storage_assignment');
-    $has_status = isset($assign_defs['field_storage_assignment_status']);
-
+    $violation_manager = \Drupal::service('storage_manager.violation_manager');
     $rows = [];
+
     foreach ($units as $unit) {
       $unit_id = $unit->get('field_storage_unit_id')->value ?: $this->t('—');
       $area = $unit->get('field_storage_area')->entity?->label() ?? $this->t('—');
-      $type = $unit->get('field_storage_type')->entity?->label() ?? $this->t('—');
-      $status = $unit->get('field_storage_status')->value ?? $this->t('—');
+      $type_entity = $unit->get('field_storage_type')->entity;
+      $type = $type_entity?->label() ?? $this->t('—');
+      $monthly_cost_value = $type_entity?->get('field_monthly_price')->value;
+      $monthly_cost = $monthly_cost_value !== NULL && $monthly_cost_value !== ''
+        ? '$' . number_format((float) $monthly_cost_value, 2)
+        : $this->t('—');
+      $status_value = $unit->get('field_storage_status')->value;
+      $status_label = $status_value ? ucfirst($status_value) : $this->t('—');
       $member = $this->t('—');
+      $violation_summary = $this->t('—');
 
-      // Query the current (active) assignment for this unit.
-      $aq = $a_storage->getQuery()->accessCheck(TRUE);
-      $aq->condition('field_storage_unit.target_id', $unit->id());
+      $assignment_query = $assignment_storage->getQuery()->accessCheck(TRUE);
+      $assignment_query->condition('field_storage_unit.target_id', $unit->id());
       if ($has_status) {
-        // Machine value is typically lowercase.
-        $aq->condition('field_storage_assignment_status', 'active');
+        $assignment_query->condition('field_storage_assignment_status', 'active');
       }
-      $aid = $aq->range(0, 1)->execute();
-      $assignment = $aid ? $a_storage->load(reset($aid)) : NULL;
+      $assignment_id = $assignment_query->range(0, 1)->execute();
+      $assignment = $assignment_id ? $assignment_storage->load(reset($assignment_id)) : NULL;
+
       if ($assignment) {
         $member_entity = $assignment->get('field_storage_user')->entity;
         if ($member_entity) {
@@ -92,10 +67,46 @@ class DashboardController extends ControllerBase {
             ])
           )->toString();
         }
+
+        if ($assignment->hasField('field_storage_complimentary') && (bool) $assignment->get('field_storage_complimentary')->value) {
+          $monthly_cost = $this->t('Complimentary');
+        }
+
+        $active_violation = $violation_manager->loadActiveViolation((int) $assignment->id());
+        if ($active_violation) {
+          $daily = $active_violation->get('field_storage_vi_daily')->value ?? $violation_manager->getDefaultDailyRate();
+          $accrued = $violation_manager->calculateAccruedCharge($active_violation);
+          if ($daily > 0) {
+            $violation_summary = $this->t('Active: $@daily/day (accrued $@accrued)', [
+              '@daily' => number_format((float) $daily, 2),
+              '@accrued' => number_format($accrued, 2),
+            ]);
+          }
+          else {
+            $violation_summary = $this->t('Active violation');
+          }
+        }
+        else {
+          $violations = $violation_manager->loadViolations((int) $assignment->id());
+          $latest = $violations[0] ?? NULL;
+          if ($latest && !$violation_manager->isViolationActive($latest)) {
+            $total_due = $latest->get('field_storage_vi_total')->value;
+            $resolved = $latest->get('field_storage_vi_resolved')->value;
+            if ($resolved) {
+              $resolved_date = date('Y-m-d', strtotime($resolved));
+              $violation_summary = $this->t('Resolved @date · $@amount due', [
+                '@date' => $resolved_date,
+                '@amount' => number_format((float) $total_due, 2),
+              ]);
+            }
+            elseif ($total_due !== NULL && $total_due !== '') {
+              $violation_summary = $this->t('Resolved · $@amount due', ['@amount' => number_format((float) $total_due, 2)]);
+            }
+          }
+        }
       }
 
       $ops = [];
-      // Edit Unit.
       $ops[] = Link::fromTextAndUrl($this->t('Edit Unit'),
         Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()])
       )->toString();
@@ -115,18 +126,34 @@ class DashboardController extends ControllerBase {
         )->toString();
       }
 
-      // If there is an active assignment, offer "Edit Assignment".
       if ($assignment) {
-        $ops[] = Link::fromTextAndUrl($this->t('Edit Assignment'),
-          Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()])
+        $edit_label = $violation_manager->loadActiveViolation((int) $assignment->id())
+          ? $this->t('Resolve Violation')
+          : $this->t('Edit Assignment');
+        $ops[] = Link::fromTextAndUrl($edit_label,
+          Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()])
         )->toString();
       }
+
+      $status_render = [
+        '#type' => 'html_tag',
+        '#tag' => 'span',
+        '#value' => $status_label,
+        '#attributes' => [
+          'class' => [
+            'storage-manager-status-pill',
+            'storage-manager-status-pill--' . ($status_value ?: 'unknown'),
+          ],
+        ],
+      ];
 
       $rows[] = [
         $unit_id,
         $area,
         $type,
-        $status,
+        $monthly_cost,
+        ['data' => $status_render],
+        $violation_summary,
         $member,
         ['data' => ['#markup' => implode(' | ', $ops)]],
       ];
@@ -136,7 +163,9 @@ class DashboardController extends ControllerBase {
       $this->buildSortableHeader('unit', $this->t('Unit ID'), $current_sort),
       $this->buildSortableHeader('area', $this->t('Area'), $current_sort),
       $this->buildSortableHeader('type', $this->t('Type'), $current_sort),
+      $this->buildSortableHeader('cost', $this->t('Monthly Cost'), $current_sort),
       $this->buildSortableHeader('status', $this->t('Status'), $current_sort),
+      $this->buildSortableHeader('violation', $this->t('Violation'), $current_sort),
       $this->buildSortableHeader('member', $this->t('Member'), $current_sort),
       $this->t('Operations'),
     ];
@@ -179,10 +208,6 @@ class DashboardController extends ControllerBase {
         $clear_link['#attributes']['class'][] = 'button';
         $clear_link['#attributes']['class'][] = 'button--small';
 
-        $user_link = Link::fromTextAndUrl($user->label(), Url::fromRoute('entity.user.canonical', ['user' => $user->id()]))
-          ->toRenderable();
-        $user_link['#attributes']['class'][] = 'storage-history-user-link';
-
         $build['filter_info'] = [
           '#type' => 'container',
           '#attributes' => ['class' => ['messages', 'messages--status', 'storage-history-filter']],
@@ -196,30 +221,55 @@ class DashboardController extends ControllerBase {
       }
     }
 
+    $violation_manager = \Drupal::service('storage_manager.violation_manager');
     $rows = [];
-    foreach ($assignments as $a) {
-      $unit = $a->get('field_storage_unit')->entity;
-      $user = $a->get('field_storage_user')->entity;
+    foreach ($assignments as $assignment) {
+      $unit = $assignment->get('field_storage_unit')->entity;
+      $user = $assignment->get('field_storage_user')->entity;
 
-      // start_date: date string (Y-m-d). end_date: datetime string.
-      $start_raw = $a->get('field_storage_start_date')->value; // e.g., '2025-09-30'
-      $end_raw = $a->get('field_storage_end_date')->value;     // e.g., '2025-09-30T12:34:00'
+      $start_raw = $assignment->get('field_storage_start_date')->value;
+      $end_raw = $assignment->get('field_storage_end_date')->value;
 
       $start = $start_raw ?: '—';
       if ($end_raw) {
         $end_ts = strtotime($end_raw);
         $end = $end_ts ? date('Y-m-d', $end_ts) : $end_raw;
-      } else {
+      }
+      else {
         $end = '—';
       }
 
-      $note = $a->get('field_storage_issue_note')->value ?? '';
+      $note = $assignment->get('field_storage_issue_note')->value ?? '';
+      $violations = $violation_manager->loadViolations((int) $assignment->id());
+      $active_violation = NULL;
+      foreach ($violations as $candidate) {
+        if ($violation_manager->isViolationActive($candidate)) {
+          $active_violation = $candidate;
+          break;
+        }
+      }
+
+      $violation_label = '—';
+      if ($active_violation) {
+        $daily = $active_violation->get('field_storage_vi_daily')->value ?? $violation_manager->getDefaultDailyRate();
+        $violation_label = $daily > 0
+          ? $this->t('Active · $@daily/day', ['@daily' => number_format((float) $daily, 2)])
+          : $this->t('Active');
+      }
+      elseif (!empty($violations)) {
+        $latest = $violations[0];
+        $total_due = $latest->get('field_storage_vi_total')->value;
+        $violation_label = $total_due !== NULL && $total_due !== ''
+          ? $this->t('Resolved · $@amount', ['@amount' => number_format((float) $total_due, 2)])
+          : $this->t('Resolved');
+      }
 
       $rows[] = [
         $unit?->get('field_storage_unit_id')->value ?? '—',
         $user?->label() ?? '—',
         $start,
         $end,
+        $violation_label,
         $note,
       ];
     }
@@ -231,6 +281,7 @@ class DashboardController extends ControllerBase {
         $this->t('Member'),
         $this->t('Start'),
         $this->t('Release'),
+        $this->t('Violation'),
         $this->t('Notes'),
       ],
       '#rows' => $rows,
@@ -240,9 +291,6 @@ class DashboardController extends ControllerBase {
     return $build;
   }
 
-  /**
-   * Helper to build a sortable column header link.
-   */
   protected function buildSortableHeader(string $key, $label, array $current): array {
     $direction = 'asc';
     if ($current['field'] === $key && $current['direction'] === 'asc') {
@@ -265,16 +313,15 @@ class DashboardController extends ControllerBase {
     return ['data' => $link];
   }
 
-  /**
-   * Sorts table rows client-side according to selected header.
-   */
   protected function sortRows(array $rows, string $field, string $direction): array {
     $index_map = [
       'unit' => 0,
       'area' => 1,
       'type' => 2,
-      'status' => 3,
-      'member' => 4,
+      'cost' => 3,
+      'status' => 4,
+      'violation' => 5,
+      'member' => 6,
     ];
     if (!isset($index_map[$field])) {
       return $rows;
@@ -292,4 +339,79 @@ class DashboardController extends ControllerBase {
     return $rows;
   }
 
+  protected function buildHubLinks(): array {
+    $sections = [
+      'operations' => [
+        'heading' => $this->t('Operations'),
+        'links' => [
+          [
+            'title' => $this->t('Add storage unit'),
+            'url' => Url::fromRoute('eck.entity.add', [
+              'eck_entity_type' => 'storage_unit',
+              'eck_entity_bundle' => 'storage_unit',
+            ], [
+              'query' => ['destination' => '/admin/storage'],
+            ]),
+            'attributes' => ['class' => ['button', 'button--primary']],
+          ],
+          [
+            'title' => $this->t('Assignment & violation history'),
+            'url' => Url::fromRoute('storage_manager.history'),
+          ],
+        ],
+      ],
+      'configuration' => [
+        'heading' => $this->t('Configuration'),
+        'links' => [
+          [
+            'title' => $this->t('Storage settings'),
+            'url' => Url::fromRoute('storage_manager.settings'),
+          ],
+          [
+            'title' => $this->t('Manage storage areas'),
+            'url' => Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_area']),
+          ],
+          [
+            'title' => $this->t('Manage storage types'),
+            'url' => Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'storage_type']),
+          ],
+        ],
+      ],
+      'member' => [
+        'heading' => $this->t('Member-facing'),
+        'links' => [
+          [
+            'title' => $this->t('Member claim page (@path)', ['@path' => '/storage/claim']),
+            'url' => Url::fromRoute('storage_manager.claim'),
+            'attributes' => ['class' => ['storage-manager-link-highlight']],
+          ],
+          [
+            'title' => $this->t('Self-service storage dashboard'),
+            'url' => Url::fromRoute('storage_manager.member_dashboard'),
+          ],
+        ],
+      ],
+    ];
+
+    $build = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['storage-manager-hub']],
+    ];
+
+    foreach ($sections as $key => $section) {
+      $build[$key . '_heading'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'h2',
+        '#value' => $section['heading'],
+        '#attributes' => ['class' => ['storage-manager-hub__heading']],
+      ];
+      $build[$key . '_links'] = [
+        '#theme' => 'links',
+        '#attributes' => ['class' => ['storage-manager-links', 'storage-manager-links--' . $key]],
+        '#links' => $section['links'],
+      ];
+    }
+
+    return $build;
+  }
 }

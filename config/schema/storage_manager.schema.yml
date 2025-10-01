@@ -1,0 +1,43 @@
+storage_manager.settings:
+  type: config_object
+  label: 'Storage Manager settings'
+  mapping:
+    claim_agreement:
+      type: text_format
+      label: 'Claim agreement text'
+    release_confirmation_message:
+      type: text
+      label: 'Release confirmation statement'
+    violation:
+      type: mapping
+      label: 'Violation defaults'
+      mapping:
+        default_daily_rate:
+          type: string
+          label: 'Default violation daily rate'
+    notifications:
+      type: mapping
+      label: 'Notification settings'
+      mapping:
+        enabled_events:
+          type: sequence
+          label: 'Enabled notification events'
+          sequence:
+            type: string
+        recipients:
+          type: string
+          label: 'Notification recipient addresses'
+        templates:
+          type: mapping
+          label: 'Notification templates'
+          mapping:
+            '*':
+              type: mapping
+              label: 'Notification template'
+              mapping:
+                subject:
+                  type: text
+                  label: 'Email subject'
+                body:
+                  type: text
+                  label: 'Email body'

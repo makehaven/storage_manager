@@ -18,7 +18,21 @@ class AssignmentGuard {
     $storage = $this->etm->getStorage('storage_assignment');
     $ids = $storage->getQuery()
       ->condition('field_storage_unit', $unit_id)
-      ->condition('field_storage_assignment_status', 'Active')
+      ->condition('field_storage_assignment_status', 'active')
+      ->accessCheck(FALSE)
+      ->range(0, 1)
+      ->execute();
+    return !empty($ids);
+  }
+
+  /**
+   * Returns TRUE if the user already has an active storage assignment.
+   */
+  public function userHasActiveAssignment(int $user_id): bool {
+    $storage = $this->etm->getStorage('storage_assignment');
+    $ids = $storage->getQuery()
+      ->condition('field_storage_user', $user_id)
+      ->condition('field_storage_assignment_status', 'active')
       ->accessCheck(FALSE)
       ->range(0, 1)
       ->execute();

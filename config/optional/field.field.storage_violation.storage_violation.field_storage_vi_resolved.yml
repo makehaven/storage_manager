@@ -1,0 +1,22 @@
+uuid: 2baf5002-a930-4a9e-b49e-14cd03c9e0df
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_violation.storage_violation
+    - field.storage.storage_violation.field_storage_vi_resolved
+  module:
+    - datetime
+id: storage_violation.storage_violation.field_storage_vi_resolved
+field_name: field_storage_vi_resolved
+entity_type: storage_violation
+bundle: storage_violation
+label: 'Violation resolved'
+description: 'Date the violation was resolved.'
+required: false
+translatable: false
+default_value: { }
+default_value_callback: ''
+settings:
+  display_summary: false
+field_type: datetime

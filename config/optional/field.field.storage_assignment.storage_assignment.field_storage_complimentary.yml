@@ -1,0 +1,19 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_assignment
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_storage_complimentary
+id: storage_assignment.storage_assignment.field_storage_complimentary
+field_name: field_storage_complimentary
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Complimentary assignment'
+description: 'Mark when a storage assignment is provided at no cost.'
+required: false
+translatable: false
+settings:
+  on_label: Complimentary
+  off_label: 'Standard billing'
+field_type: boolean

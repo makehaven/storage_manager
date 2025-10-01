@@ -1,0 +1,21 @@
+uuid: c80c62b8-9d24-455f-ad65-e9f138736aaf
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_violation
+  module:
+    - datetime
+id: storage_violation.field_storage_vi_start
+field_name: field_storage_vi_start
+entity_type: storage_violation
+type: datetime
+settings:
+  datetime_type: datetime
+module: datetime
+locked: false
+cardinality: 1
+translatable: true
+indexes: { }
+persist_with_no_fields: false
+custom_storage: false

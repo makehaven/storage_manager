@@ -1,0 +1,56 @@
+claim_agreement:
+  value: ''
+  format: basic_html
+release_confirmation_message: 'I have totally cleaned out the storage area and removed my name. I understand I will be charged for cleanup and disposal if items are left or the storage area is in bad condition.'
+violation:
+  default_daily_rate: '0.00'
+notifications:
+  enabled_events:
+    - assignment
+    - release
+    - violation_warning
+    - violation_fine
+    - violation_resolved
+  recipients: ''
+  templates:
+    assignment:
+      subject: 'Storage assignment confirmed for unit [unit_id]'
+      body: |-
+        Hello [member_name],
+
+        You have been assigned storage unit [unit_id] ([storage_type]) starting [assignment_start]. The current monthly cost is $[monthly_cost].
+
+        Thanks,
+        [site_name] team
+    release:
+      subject: 'Storage release confirmed for unit [unit_id]'
+      body: |-
+        Hello [member_name],
+
+        Your storage assignment for unit [unit_id] has ended effective [release_date].
+
+        If this is unexpected, please contact staff.
+    violation_warning:
+      subject: 'Storage violation recorded for unit [unit_id]'
+      body: |-
+        Hello [member_name],
+
+        A storage policy violation was recorded for unit [unit_id] on [violation_start]. A daily charge of $[violation_daily_rate] will accrue until the issue is resolved.
+
+        Please contact staff if you have questions.
+    violation_fine:
+      subject: 'Storage violation charges for unit [unit_id]'
+      body: |-
+        Hello [member_name],
+
+        The storage violation for unit [unit_id] has accrued $[violation_total_due] in charges.
+
+        Please settle the balance with staff at your earliest convenience.
+    violation_resolved:
+      subject: 'Storage violation resolved for unit [unit_id]'
+      body: |-
+        Hello [member_name],
+
+        The storage violation for unit [unit_id] was resolved on [violation_resolved]. Any outstanding balance is $[violation_total_due].
+
+        Thank you for your attention.

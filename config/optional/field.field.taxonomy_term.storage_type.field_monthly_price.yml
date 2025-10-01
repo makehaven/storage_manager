@@ -8,8 +8,8 @@ id: taxonomy_term.storage_type.field_monthly_price
 field_name: field_monthly_price
 entity_type: taxonomy_term
 bundle: storage_type
-label: 'Monthly Price'
-description: 'The monthly price for this type of storage.'
+label: 'Monthly Cost'
+description: 'The monthly cost for this type of storage.'
 required: false
 translatable: false
 default_value: {  }

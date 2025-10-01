@@ -2,3 +2,8 @@ map:
   css:
     theme:
       css/storage-map.css: {}
+
+admin:
+  css:
+    theme:
+      css/storage-admin.css: {}

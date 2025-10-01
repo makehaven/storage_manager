@@ -1,0 +1,19 @@
+uuid: 8f9cefa3-0d60-4e03-9a8c-88a17b3814d1
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_violation.storage_violation
+    - field.storage.storage_violation.field_storage_vi_note
+id: storage_violation.storage_violation.field_storage_vi_note
+field_name: field_storage_vi_note
+entity_type: storage_violation
+bundle: storage_violation
+label: 'Violation notes'
+description: 'Staff notes about the violation.'
+required: false
+translatable: false
+default_value: { }
+default_value_callback: ''
+settings: { }
+field_type: string_long

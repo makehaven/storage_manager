@@ -37,3 +37,51 @@ storage_manager.unit_release:
     parameters:
       storage_unit:
         type: entity:storage_unit
+
+storage_manager.claim:
+  path: '/storage/claim'
+  defaults:
+    _title: 'Claim Storage'
+    _form: '\Drupal\storage_manager\Form\ClaimStorageForm'
+  requirements:
+    _permission: 'claim storage unit'
+
+storage_manager.member_dashboard:
+  path: '/user/storage'
+  defaults:
+    _title: 'My Storage'
+    _controller: '\Drupal\storage_manager\Controller\MemberStorageController::page'
+  requirements:
+    _permission: 'claim storage unit'
+
+storage_manager.settings:
+  path: '/admin/config/storage/manager'
+  defaults:
+    _title: 'Storage Manager settings'
+    _form: '\Drupal\storage_manager\Form\StorageManagerSettingsForm'
+  requirements:
+    _permission: 'manage storage'
+
+storage_manager.assignment_edit:
+  path: '/admin/storage/assignment/{storage_assignment}/edit'
+  defaults:
+    _title: 'Edit Assignment'
+    _form: '\Drupal\storage_manager\Form\EditAssignmentForm'
+  requirements:
+    _permission: 'manage storage'
+  options:
+    parameters:
+      storage_assignment:
+        type: entity:storage_assignment
+
+storage_manager.user_release:
+  path: '/user/storage/release/{storage_assignment}'
+  defaults:
+    _title: 'Confirm Release'
+    _form: '\Drupal\storage_manager\Form\UserReleaseForm'
+  requirements:
+    _permission: 'claim storage unit'
+  options:
+    parameters:
+      storage_assignment:
+        type: entity:storage_assignment

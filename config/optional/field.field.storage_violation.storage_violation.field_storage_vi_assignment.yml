@@ -1,0 +1,31 @@
+uuid: 41c78d2f-605e-4843-8053-ffaad5d7a1e8
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - eck.eck_type.storage_violation.storage_violation
+    - field.storage.storage_violation.field_storage_vi_assignment
+  module:
+    - eck
+id: storage_violation.storage_violation.field_storage_vi_assignment
+field_name: field_storage_vi_assignment
+entity_type: storage_violation
+bundle: storage_violation
+label: 'Related assignment'
+description: 'Storage assignment this violation applies to.'
+required: true
+translatable: false
+default_value: { }
+default_value_callback: ''
+settings:
+  handler: 'default:storage_assignment'
+  handler_settings:
+    target_bundles:
+      storage_assignment: storage_assignment
+    sort:
+      field: _none
+      direction: ASC
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

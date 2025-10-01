@@ -6,15 +6,17 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\storage_manager\Service\AssignmentGuard;
+use Drupal\storage_manager\Service\NotificationManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class AssignForm extends FormBase {
 
-  public function __construct(private AssignmentGuard $guard) {}
+  public function __construct(private AssignmentGuard $guard, private NotificationManager $notificationManager) {}
 
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('storage_manager.assignment_guard')
+      $container->get('storage_manager.assignment_guard'),
+      $container->get('storage_manager.notification_manager'),
     );
   }
 
@@ -48,6 +50,12 @@ class AssignForm extends FormBase {
       '#title' => 'Start date',
       '#default_value' => date('Y-m-d'),
       '#required' => TRUE,
+    ];
+
+    $form['complimentary'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Complimentary assignment (no monthly cost)'),
+      '#description' => $this->t('Use when providing storage at no charge to staff or volunteers.'),
     ];
 
     $form['bill_via_stripe'] = [
@@ -95,12 +103,18 @@ class AssignForm extends FormBase {
       'field_storage_start_date' => $form_state->getValue('start_date'),
       'field_storage_assignment_status' => 'active',
       'field_storage_price_snapshot' => $price_snapshot,
+      'field_storage_complimentary' => $form_state->getValue('complimentary') ? 1 : 0,
     ]);
     $assignment->save();
 
     // Update unit status to Occupied.
-    $unit->set('field_storage_status', 'Occupied');
+    $unit->set('field_storage_status', 'occupied');
     $unit->save();
+
+    $this->notificationManager->sendEvent('assignment', [
+      'assignment' => $assignment,
+      'unit' => $unit,
+    ]);
 
     // (Optional) Stripe create subscription later via SubscriptionManager.
 

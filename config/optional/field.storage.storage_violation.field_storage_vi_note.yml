@@ -1,0 +1,19 @@
+uuid: 3ef4a050-7c62-4aa7-af17-bbf3d861b519
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_violation
+id: storage_violation.field_storage_vi_note
+field_name: field_storage_vi_note
+entity_type: storage_violation
+type: string_long
+settings:
+  case_sensitive: false
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: { }
+persist_with_no_fields: false
+custom_storage: false

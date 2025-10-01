@@ -1,0 +1,22 @@
+uuid: fedd425e-911a-4f7c-ad09-10ac50423729
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_entity_type.storage_violation
+  module:
+    - number
+id: storage_violation.field_storage_vi_daily
+field_name: field_storage_vi_daily
+entity_type: storage_violation
+type: decimal
+settings:
+  precision: 10
+  scale: 2
+module: number
+locked: false
+cardinality: 1
+translatable: true
+indexes: { }
+persist_with_no_fields: false
+custom_storage: false

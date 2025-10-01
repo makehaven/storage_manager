@@ -1,0 +1,24 @@
+uuid: 60f0345a-2d72-4b65-9a8b-0e475f90ef34
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_violation.storage_violation
+    - field.storage.storage_violation.field_storage_vi_active
+  module:
+    - options
+id: storage_violation.storage_violation.field_storage_vi_active
+field_name: field_storage_vi_active
+entity_type: storage_violation
+bundle: storage_violation
+label: 'Violation active'
+description: 'Whether the violation is currently open.'
+required: true
+translatable: false
+default_value:
+  - { value: 1 }
+default_value_callback: ''
+settings:
+  on_label: 'Active'
+  off_label: 'Resolved'
+field_type: boolean

@@ -1,0 +1,25 @@
+uuid: 3b19782d-4aac-433a-9b15-2ef749398a36
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_violation.storage_violation
+    - field.storage.storage_violation.field_storage_vi_total
+  module:
+    - number
+id: storage_violation.storage_violation.field_storage_vi_total
+field_name: field_storage_vi_total
+entity_type: storage_violation
+bundle: storage_violation
+label: 'Total due'
+description: 'Total amount owed when the violation is resolved.'
+required: false
+translatable: false
+default_value: { }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: decimal
