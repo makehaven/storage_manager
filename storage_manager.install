@@ -5,6 +5,7 @@
  * Install, update, and uninstall functions for the Storage Manager module.
  */
 
+use Drupal\Core\Config\FileStorage;
 use Drupal\taxonomy\Entity\Term;
 
 /**
@@ -96,7 +97,10 @@ function _storage_manager_seed_storage_types() {
  */
 function _storage_manager_ensure_default_config() {
   $config_storage = \Drupal::service('config.storage');
-  $config_installer = \Drupal::service('config.installer');
+  $config_factory = \Drupal::configFactory();
+
+  $module_path = \Drupal::service('extension.list.module')->getPath('storage_manager');
+  $extension_storage = new FileStorage($module_path . '/config/optional');
 
   $config_items = [
     'eck.eck_entity_type.storage_assignment',
@@ -146,9 +150,10 @@ function _storage_manager_ensure_default_config() {
     }
   }
 
-  if ($missing) {
-    foreach (array_chunk($missing, 5) as $chunk) {
-      $config_installer->installConfiguration('module', 'storage_manager', $chunk);
+  foreach ($missing as $name) {
+    if ($extension_storage->exists($name)) {
+      $data = $extension_storage->read($name);
+      $config_factory->getEditable($name)->setData($data)->save(TRUE);
     }
   }
 }
