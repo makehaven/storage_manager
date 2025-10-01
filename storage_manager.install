@@ -16,21 +16,7 @@ function storage_manager_install() {
   // Set the initial schema version.
   \Drupal::service('keyvalue')->get('system.schema')->set('storage_manager', 10001);
 
-  $voc_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary');
-
-  $required_vocabularies = ['storage_area', 'storage_type'];
-  $missing = [];
-  foreach ($required_vocabularies as $vid) {
-    if (!$voc_storage->load($vid)) {
-      $missing[] = $vid;
-    }
-  }
-
-  // Occasionally config imports can time out on remote environments. If the
-  // vocabularies are missing, attempt to reinstall our default config.
-  if ($missing) {
-    \Drupal::service('config.installer')->installDefaultConfig('module', 'storage_manager');
-  }
+  _storage_manager_ensure_default_config();
 
   // Seed the storage areas.
   _storage_manager_seed_storage_areas();
@@ -53,7 +39,7 @@ function storage_manager_update_10001() {
  * Ensure default configuration exists after dependency adjustments.
  */
 function storage_manager_update_10002() {
-  \Drupal::service('config.installer')->installDefaultConfig('module', 'storage_manager');
+  _storage_manager_ensure_default_config();
   return t('Reinstalled missing Storage Manager configuration.');
 }
 
@@ -101,6 +87,68 @@ function _storage_manager_seed_storage_types() {
       ->execute();
     if (!$exists) {
       Term::create(['vid' => $vid, 'name' => $name])->save();
+    }
+  }
+}
+
+/**
+ * Reinstalls any missing default configuration items for the module.
+ */
+function _storage_manager_ensure_default_config() {
+  $config_storage = \Drupal::service('config.storage');
+  $config_installer = \Drupal::service('config.installer');
+
+  $config_items = [
+    'eck.eck_entity_type.storage_assignment',
+    'eck.eck_entity_type.storage_unit',
+    'eck.eck_type.storage_assignment.storage_assignment',
+    'eck.eck_type.storage_unit.storage_unit',
+    'field.storage.storage_assignment.field_storage_assignment_status',
+    'field.storage.storage_assignment.field_storage_end_date',
+    'field.storage.storage_assignment.field_storage_issue_note',
+    'field.storage.storage_assignment.field_storage_price_snapshot',
+    'field.storage.storage_assignment.field_storage_start_date',
+    'field.storage.storage_assignment.field_storage_stripe_sub_id',
+    'field.storage.storage_assignment.field_storage_unit',
+    'field.storage.storage_assignment.field_storage_user',
+    'field.storage.storage_unit.field_storage_area',
+    'field.storage.storage_unit.field_storage_note',
+    'field.storage.storage_unit.field_storage_status',
+    'field.storage.storage_unit.field_storage_type',
+    'field.storage.storage_unit.field_storage_unit_id',
+    'field.storage.taxonomy_term.field_monthly_price',
+    'field.field.storage_assignment.storage_assignment.field_storage_assignment_status',
+    'field.field.storage_assignment.storage_assignment.field_storage_end_date',
+    'field.field.storage_assignment.storage_assignment.field_storage_issue_note',
+    'field.field.storage_assignment.storage_assignment.field_storage_price_snapshot',
+    'field.field.storage_assignment.storage_assignment.field_storage_start_date',
+    'field.field.storage_assignment.storage_assignment.field_storage_stripe_sub_id',
+    'field.field.storage_assignment.storage_assignment.field_storage_unit',
+    'field.field.storage_assignment.storage_assignment.field_storage_user',
+    'field.field.storage_unit.storage_unit.field_storage_area',
+    'field.field.storage_unit.storage_unit.field_storage_note',
+    'field.field.storage_unit.storage_unit.field_storage_status',
+    'field.field.storage_unit.storage_unit.field_storage_type',
+    'field.field.storage_unit.storage_unit.field_storage_unit_id',
+    'field.field.taxonomy_term.storage_type.field_monthly_price',
+    'core.entity_form_display.storage_assignment.storage_assignment.default',
+    'core.entity_form_display.storage_unit.storage_unit.default',
+    'core.entity_view_display.storage_assignment.storage_assignment.default',
+    'core.entity_view_display.storage_unit.storage_unit.default',
+    'taxonomy.vocabulary.storage_area',
+    'taxonomy.vocabulary.storage_type',
+  ];
+
+  $missing = [];
+  foreach ($config_items as $name) {
+    if (!$config_storage->exists($name)) {
+      $missing[] = $name;
+    }
+  }
+
+  if ($missing) {
+    foreach (array_chunk($missing, 5) as $chunk) {
+      $config_installer->installConfiguration('module', 'storage_manager', $chunk);
     }
   }
 }
