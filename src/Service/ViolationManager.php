@@ -110,16 +110,12 @@ class ViolationManager {
       return 0.0;
     }
 
-    $grace_period_hours = (int) $this->configFactory->get('storage_manager.settings')->get('violation.grace_period');
-    $chargeable_start = $start->add(new \DateInterval("PT{$grace_period_hours}H"));
-
     $end = $as_of ?: $this->createDateTimeFromTimestamp($this->time->getRequestTime());
-
-    if ($end <= $chargeable_start) {
+    if ($end <= $start) {
       return 0.0;
     }
 
-    $seconds = $end->getTimestamp() - $chargeable_start->getTimestamp();
+    $seconds = $end->getTimestamp() - $start->getTimestamp();
     $days = (int) ceil($seconds / 86400);
     if ($days < 1) {
       $days = 1;

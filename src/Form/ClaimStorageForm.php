@@ -7,7 +7,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\storage_manager\Service\AssignmentGuard;
 use Drupal\storage_manager\Service\NotificationManager;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -22,8 +21,7 @@ class ClaimStorageForm extends FormBase {
     private readonly AssignmentGuard $guard,
     private readonly ConfigFactoryInterface $storageConfigFactory,
     private readonly NotificationManager $notificationManager,
-    private readonly AccountProxyInterface $storageCurrentUser,
-    private readonly CacheTagsInvalidatorInterface $cacheTagsInvalidator
+    private readonly AccountProxyInterface $storageCurrentUser
   ) {}
 
   public static function create(ContainerInterface $container): static {
@@ -33,7 +31,6 @@ class ClaimStorageForm extends FormBase {
       $container->get('config.factory'),
       $container->get('storage_manager.notification_manager'),
       $container->get('current_user'),
-      $container->get('cache_tags.invalidator'),
     );
   }
 
@@ -180,8 +177,7 @@ class ClaimStorageForm extends FormBase {
     ]);
 
     $this->messenger()->addStatus($this->t('You have claimed storage unit @unit.', ['@unit' => $unit->get('field_storage_unit_id')->value ?: $unit->id()]));
-    $this->cacheTagsInvalidator->invalidateTags(['storage_assignment_list']);
-    $form_state->setRedirect('storage_manager.member_dashboard');
+    $form_state->setRedirect('<current>');
   }
 
   /**

@@ -62,7 +62,9 @@ class DashboardController extends ControllerBase {
         if ($member_entity) {
           $member = Link::fromTextAndUrl(
             $member_entity->label(),
-            Url::fromRoute('entity.user.canonical', ['user' => $member_entity->id()])
+            Url::fromRoute('storage_manager.history', [], [
+              'query' => ['user' => $member_entity->id()],
+            ])
           )->toString();
         }
 
@@ -104,48 +106,33 @@ class DashboardController extends ControllerBase {
         }
       }
 
-      $operations = [];
+      $ops = [];
+      $ops[] = Link::fromTextAndUrl($this->t('Edit Unit'),
+        Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()])
+      )->toString();
 
       if ($assignment) {
-        $operations['release_unit'] = [
-          'title' => $this->t('Release Unit'),
-          'url' => Url::fromRoute('storage_manager.unit_release', ['storage_unit' => $unit->id()], [
+        $ops[] = Link::fromTextAndUrl($this->t('Release Unit'),
+          Url::fromRoute('storage_manager.unit_release', ['storage_unit' => $unit->id()], [
             'query' => ['destination' => '/admin/storage'],
-          ]),
-        ];
+          ])
+        )->toString();
       }
       else {
-        $operations['assign_unit'] = [
-          'title' => $this->t('Assign Unit'),
-          'url' => Url::fromRoute('storage_manager.unit_assign', ['storage_unit' => $unit->id()], [
+        $ops[] = Link::fromTextAndUrl($this->t('Assign Unit'),
+          Url::fromRoute('storage_manager.unit_assign', ['storage_unit' => $unit->id()], [
             'query' => ['destination' => '/admin/storage'],
-          ]),
-        ];
+          ])
+        )->toString();
       }
 
-      $operations['edit_unit'] = [
-        'title' => $this->t('Edit Unit'),
-        'url' => Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()]),
-      ];
-
       if ($assignment) {
-        $operations['edit_assignment'] = [
-          'title' => $this->t('Edit Assignment'),
-          'url' => Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()]),
-        ];
-
-        if ($violation_manager->loadActiveViolation((int) $assignment->id())) {
-          $operations['edit_violation'] = [
-            'title' => $this->t('Edit Active Violation'),
-            'url' => Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()]),
-          ];
-        }
-        else {
-          $operations['add_violation'] = [
-            'title' => $this->t('Add Violation'),
-            'url' => Url::fromRoute('storage_manager.start_violation', ['storage_assignment' => $assignment->id()]),
-          ];
-        }
+        $edit_label = $violation_manager->loadActiveViolation((int) $assignment->id())
+          ? $this->t('Resolve Violation')
+          : $this->t('Edit Assignment');
+        $ops[] = Link::fromTextAndUrl($edit_label,
+          Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()])
+        )->toString();
       }
 
       $status_render = [
@@ -168,7 +155,7 @@ class DashboardController extends ControllerBase {
         ['data' => $status_render],
         $violation_summary,
         $member,
-        ['data' => ['#type' => 'dropbutton', '#links' => $operations]],
+        ['data' => ['#markup' => implode(' | ', $ops)]],
       ];
     }
 
@@ -277,13 +264,8 @@ class DashboardController extends ControllerBase {
           : $this->t('Resolved');
       }
 
-      $unit_id_display = '—';
-      if ($unit) {
-        $unit_id_display = $unit->get('field_storage_unit_id')->value ?? '—';
-      }
-
       $rows[] = [
-        $unit_id_display,
+        $unit?->get('field_storage_unit_id')->value ?? '—',
         $user?->label() ?? '—',
         $start,
         $end,
@@ -417,16 +399,20 @@ class DashboardController extends ControllerBase {
     ];
 
     foreach ($sections as $key => $section) {
-      $build[$key . '_heading'] = [
-        '#type' => 'html_tag',
-        '#tag' => 'h2',
-        '#value' => $section['heading'],
-        '#attributes' => ['class' => ['storage-manager-hub__heading']],
-      ];
-      $build[$key . '_links'] = [
-        '#theme' => 'links',
-        '#attributes' => ['class' => ['storage-manager-links', 'storage-manager-links--' . $key]],
-        '#links' => $section['links'],
+      $build[$key] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['storage-manager-hub__section']],
+        'heading' => [
+          '#type' => 'html_tag',
+          '#tag' => 'h2',
+          '#value' => $section['heading'],
+          '#attributes' => ['class' => ['storage-manager-hub__heading']],
+        ],
+        'links' => [
+          '#theme' => 'links',
+          '#attributes' => ['class' => ['storage-manager-links']],
+          '#links' => $section['links'],
+        ],
       ];
     }
 

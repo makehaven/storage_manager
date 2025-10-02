@@ -23,43 +23,25 @@ class StorageManagerSettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config = $this->config('storage_manager.settings');
 
-    $form['self_service'] = [
-      '#type' => 'details',
-      '#title' => $this->t('Member self-service'),
-      '#open' => TRUE,
-      '#weight' => -10,
-    ];
-
     $claim_url = Url::fromRoute('storage_manager.claim');
     $dashboard_url = Url::fromRoute('storage_manager.member_dashboard');
-    $form['self_service']['links'] = [
+    $form['member_self_service_links'] = [
       '#type' => 'item',
-      '#title' => $this->t('Self-service URLs'),
+      '#title' => $this->t('Member self-service URLs'),
       '#markup' => implode('<br>', [
         Link::fromTextAndUrl($this->t('Claim storage: @url', ['@url' => $claim_url->toString()]), $claim_url)->toString(),
         Link::fromTextAndUrl($this->t('Manage storage: @url', ['@url' => $dashboard_url->toString()]), $dashboard_url)->toString(),
       ]),
       '#description' => $this->t('Share these links with members so they can claim or release their storage assignments.'),
+      '#weight' => -10,
     ];
 
-    $form['self_service']['release_confirmation_message'] = [
+    $form['release_confirmation_message'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Self-release confirmation statement'),
       '#default_value' => $config->get('release_confirmation_message') ?: '',
       '#description' => $this->t('Displayed to members when they release their storage. Members must agree to this statement before the release is processed.'),
       '#required' => TRUE,
-    ];
-
-    $form['self_service']['release_photo_verification'] = [
-      '#type' => 'radios',
-      '#title' => $this->t('Photo verification on self-release'),
-      '#options' => [
-        'disabled' => $this->t('Disabled'),
-        'optional' => $this->t('Optional'),
-        'required' => $this->t('Required'),
-      ],
-      '#default_value' => $config->get('release_photo_verification') ?? 'disabled',
-      '#description' => $this->t('Ask the member to upload a photo of the cleared-out space when they self-release their unit.'),
     ];
 
     $form['claim_agreement'] = [
@@ -75,7 +57,6 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       '#type' => 'details',
       '#title' => $this->t('Violation defaults'),
       '#open' => TRUE,
-      '#tree' => TRUE,
     ];
 
     $form['violation']['default_daily_rate'] = [
@@ -85,14 +66,6 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       '#step' => '0.01',
       '#min' => '0',
       '#description' => $this->t('Base daily charge applied when a violation is active. Individual assignments can override this amount.'),
-    ];
-
-    $form['violation']['grace_period'] = [
-      '#type' => 'number',
-      '#title' => $this->t('Violation grace period (hours)'),
-      '#default_value' => $config->get('violation.grace_period') ?? 48,
-      '#min' => '0',
-      '#description' => $this->t('The number of hours after a violation is recorded before daily charges begin to accrue. A warning email is sent immediately when the violation is recorded.'),
     ];
 
     $events = $this->getNotificationEvents();
@@ -178,15 +151,10 @@ class StorageManagerSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $config = $this->config('storage_manager.settings');
     $config->set('release_confirmation_message', $form_state->getValue('release_confirmation_message'));
-    $config->set('release_photo_verification', $form_state->getValue('release_photo_verification'));
     $agreement = $form_state->getValue('claim_agreement');
     $config->set('claim_agreement', $agreement);
-
-    $violation_settings = $form_state->getValue('violation');
-    $default_daily = $violation_settings['default_daily_rate'];
+    $default_daily = $form_state->getValue('default_daily_rate');
     $config->set('violation.default_daily_rate', $default_daily === '' || $default_daily === NULL ? '0.00' : number_format((float) $default_daily, 2, '.', ''));
-    $config->set('violation.grace_period', (int) $violation_settings['grace_period']);
-
     $events = $this->getNotificationEvents();
 
     $enabled_values = $form_state->getValue('enabled_events') ?? [];

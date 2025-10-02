@@ -49,6 +49,9 @@ class EditAssignmentForm extends FormBase {
     if ($active_violation) {
       $form['active_violation'] = $this->buildActiveViolationSection($active_violation);
     }
+    else {
+      $form['start_violation'] = $this->buildStartViolationSection();
+    }
 
     $form['violation_history'] = $this->buildViolationHistory($violations);
 
@@ -141,6 +144,24 @@ class EditAssignmentForm extends FormBase {
         }
       }
     }
+    elseif ($form_state->getValue('start_violation_trigger')) {
+      $start_input = $form_state->getValue('start_violation_start');
+      $daily = $form_state->getValue('start_violation_daily_rate');
+      $note = $form_state->getValue('start_violation_note');
+
+      $violation = $this->violationManager->startViolation($assignment, [
+        'start' => $start_input instanceof DrupalDateTime ? $start_input : NULL,
+        'daily_rate' => $daily,
+        'note' => $note,
+      ]);
+
+      $context = [
+        'assignment' => $assignment,
+        'violation' => $violation,
+      ];
+      $this->notificationManager->sendEvent('violation_warning', $context);
+      $this->messenger()->addStatus($this->t('Violation started.'));
+    }
 
     $this->messenger()->addStatus($this->t('Assignment has been updated.'));
   }
@@ -195,6 +216,37 @@ class EditAssignmentForm extends FormBase {
             ':input[name="active_violation_resolve"]' => ['checked' => TRUE],
           ],
         ],
+      ],
+    ];
+  }
+
+  protected function buildStartViolationSection(): array {
+    $default_rate = $this->violationManager->getDefaultDailyRate();
+
+    return [
+      '#type' => 'details',
+      '#title' => $this->t('Start violation'),
+      '#open' => TRUE,
+      'start_violation_start' => [
+        '#type' => 'datetime',
+        '#title' => $this->t('Violation start'),
+        '#default_value' => new DrupalDateTime('now'),
+        '#date_time_element' => 'none',
+      ],
+      'start_violation_daily_rate' => [
+        '#type' => 'number',
+        '#title' => $this->t('Daily charge'),
+        '#default_value' => $default_rate,
+        '#step' => '0.01',
+        '#min' => '0',
+      ],
+      'start_violation_note' => [
+        '#type' => 'textarea',
+        '#title' => $this->t('Violation notes'),
+      ],
+      'start_violation_trigger' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Start a new violation with the details above'),
       ],
     ];
   }
