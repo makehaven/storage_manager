@@ -277,8 +277,13 @@ class DashboardController extends ControllerBase {
           : $this->t('Resolved');
       }
 
+      $unit_id_display = '—';
+      if ($unit) {
+        $unit_id_display = $unit->get('field_storage_unit_id')->value ?? '—';
+      }
+
       $rows[] = [
-        $unit?->get('field_storage_unit_id')?->value ?? '—',
+        $unit_id_display,
         $user?->label() ?? '—',
         $start,
         $end,
