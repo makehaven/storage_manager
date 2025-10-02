@@ -36,6 +36,15 @@ class MemberStorageController extends ControllerBase {
     $account_id = (int) $this->storageCurrentUser->id();
     $build = [];
 
+    // The list of assignments is cacheable per user, and also depends on the
+    // list of storage_assignment entities. The user context ensures each user
+    // sees their own assignments, and the list tag ensures the view is
+    // refreshed when any assignment changes.
+    $build['#cache'] = [
+      'contexts' => ['user'],
+      'tags' => ['storage_assignment_list'],
+    ];
+
     $shortcuts = $this->buildShortcutLinks();
     if ($shortcuts) {
       $build['shortcuts'] = $shortcuts;

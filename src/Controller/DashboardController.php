@@ -127,12 +127,15 @@ class DashboardController extends ControllerBase {
       }
 
       if ($assignment) {
-        $edit_label = $violation_manager->loadActiveViolation((int) $assignment->id())
-          ? $this->t('Resolve Violation')
-          : $this->t('Edit Assignment');
-        $ops[] = Link::fromTextAndUrl($edit_label,
-          Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()])
+        $ops[] = Link::fromTextAndUrl($this->t('Edit Assignment'),
+          Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()])
         )->toString();
+
+        if ($violation_manager->loadActiveViolation((int) $assignment->id())) {
+          $ops[] = Link::fromTextAndUrl($this->t('Edit Active Violation'),
+            Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()])
+          )->toString();
+        }
       }
 
       $status_render = [
