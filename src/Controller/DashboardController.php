@@ -265,7 +265,7 @@ class DashboardController extends ControllerBase {
       }
 
       $rows[] = [
-        $unit?->get('field_storage_unit_id')->value ?? '—',
+        ($unit ? $unit->get('field_storage_unit_id')->value : NULL) ?? '—',
         $user?->label() ?? '—',
         $start,
         $end,
