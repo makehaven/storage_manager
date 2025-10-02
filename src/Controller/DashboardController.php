@@ -62,9 +62,7 @@ class DashboardController extends ControllerBase {
         if ($member_entity) {
           $member = Link::fromTextAndUrl(
             $member_entity->label(),
-            Url::fromRoute('storage_manager.history', [], [
-              'query' => ['user' => $member_entity->id()],
-            ])
+            Url::fromRoute('entity.user.canonical', ['user' => $member_entity->id()])
           )->toString();
         }
 
