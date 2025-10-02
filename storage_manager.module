@@ -9,35 +9,10 @@ use Drupal\Core\Entity\EntityStorageException;
  */
 
 /**
- * Implements hook_entity_presave().
- */
-function storage_manager_entity_presave(EntityInterface $entity) {
-  if ($entity->getEntityTypeId() === 'storage_unit') {
-    $id = $entity->get('field_storage_unit_id')->value;
-    if ($id) {
-      $query = \Drupal::entityQuery('storage_unit')
-        ->condition('field_storage_unit_id', $id)
-        ->accessCheck(FALSE)
-        ->range(0, 1);
-
-      // Exclude self when updating.
-      if (!$entity->isNew()) {
-        $query->condition('id', $entity->id(), '<>');
-      }
-      $exists = $query->execute();
-      if ($exists) {
-        throw new EntityStorageException(t('Unit ID %id is already in use.', ['%id' => $id]));
-      }
-    }
-  }
-}
-
-/**
  * Implements hook_form_alter().
  */
 function storage_manager_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
   if ($form_id == 'storage_unit_storage_unit_form' || $form_id == 'storage_unit_storage_unit_edit_form') {
-    $form['#validate'][] = '_storage_manager_form_validate_unique_unit_id';
     if (isset($form['status'])) {
       $form['status']['#access'] = FALSE;
     }
@@ -49,38 +24,10 @@ function storage_manager_form_alter(&$form, \Drupal\Core\Form\FormStateInterface
 }
 
 /**
- * Custom validation handler for the storage unit form.
- */
-function _storage_manager_form_validate_unique_unit_id(&$form, \Drupal\Core\Form\FormStateInterface $form_state) {
-  $unit_id = $form_state->getValue('field_storage_unit_id')[0]['value'];
-  $entity = $form_state->getFormObject()->getEntity();
-
-  $query = \Drupal::entityQuery('storage_unit')
-    ->condition('field_storage_unit_id', $unit_id)
-    ->accessCheck(FALSE);
-
-  if (!$entity->isNew()) {
-    $query->condition('id', $entity->id(), '<>');
-  }
-
-  $ids = $query->execute();
-
-  if (!empty($ids)) {
-    $form_state->setErrorByName('field_storage_unit_id', t('The Unit ID must be unique.'));
-  }
-}
-
-/**
  * Redirect new storage units back to the dashboard after creation.
  */
 function _storage_manager_storage_unit_redirect_submit(array &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
   $form_state->setRedirect('storage_manager.dashboard');
-}
-
-/**
- * Implements hook_entity_type_build().
- */
-function storage_manager_entity_type_build(array &$entity_types) {
 }
 
 /**
