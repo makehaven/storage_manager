@@ -62,9 +62,7 @@ class DashboardController extends ControllerBase {
         if ($member_entity) {
           $member = Link::fromTextAndUrl(
             $member_entity->label(),
-            Url::fromRoute('storage_manager.history', [], [
-              'query' => ['user' => $member_entity->id()],
-            ])
+            Url::fromRoute('entity.user.canonical', ['user' => $member_entity->id()])
           )->toString();
         }
 
@@ -107,33 +105,46 @@ class DashboardController extends ControllerBase {
       }
 
       $ops = [];
-      $ops[] = Link::fromTextAndUrl($this->t('Edit Unit'),
-        Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()])
-      )->toString();
-
       if ($assignment) {
-        $ops[] = Link::fromTextAndUrl($this->t('Release Unit'),
-          Url::fromRoute('storage_manager.unit_release', ['storage_unit' => $unit->id()], [
+        // Occupied unit.
+        $ops['release'] = [
+          'title' => $this->t('Release Unit'),
+          'url' => Url::fromRoute('storage_manager.unit_release', ['storage_unit' => $unit->id()], [
             'query' => ['destination' => '/admin/storage'],
-          ])
-        )->toString();
-      }
-      else {
-        $ops[] = Link::fromTextAndUrl($this->t('Assign Unit'),
-          Url::fromRoute('storage_manager.unit_assign', ['storage_unit' => $unit->id()], [
-            'query' => ['destination' => '/admin/storage'],
-          ])
-        )->toString();
-      }
-
-      if ($assignment) {
-        $edit_label = $violation_manager->loadActiveViolation((int) $assignment->id())
+          ]),
+        ];
+        $edit_label = $active_violation
           ? $this->t('Resolve Violation')
           : $this->t('Edit Assignment');
-        $ops[] = Link::fromTextAndUrl($edit_label,
-          Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()])
-        )->toString();
+        $ops['edit_assignment'] = [
+          'title' => $edit_label,
+          'url' => Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()]),
+        ];
+        if (!$active_violation) {
+          $ops['add_violation'] = [
+            'title' => $this->t('Add Violation'),
+            'url' => Url::fromRoute('storage_manager.start_violation', ['storage_assignment' => $assignment->id()]),
+          ];
+        }
       }
+      else {
+        // Vacant unit.
+        $ops['assign'] = [
+          'title' => $this->t('Assign Unit'),
+          'url' => Url::fromRoute('storage_manager.unit_assign', ['storage_unit' => $unit->id()], [
+            'query' => ['destination' => '/admin/storage'],
+          ]),
+        ];
+      }
+      $ops['edit_unit'] = [
+        'title' => $this->t('Edit Unit'),
+        'url' => Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()]),
+      ];
+
+      $operations_render = [
+        '#type' => 'dropbutton',
+        '#links' => $ops,
+      ];
 
       $status_render = [
         '#type' => 'html_tag',
@@ -155,7 +166,7 @@ class DashboardController extends ControllerBase {
         ['data' => $status_render],
         $violation_summary,
         $member,
-        ['data' => ['#markup' => implode(' | ', $ops)]],
+        ['data' => $operations_render],
       ];
     }
 
@@ -227,6 +238,15 @@ class DashboardController extends ControllerBase {
       $unit = $assignment->get('field_storage_unit')->entity;
       $user = $assignment->get('field_storage_user')->entity;
 
+      if (!$unit) {
+        $this->getLogger('storage_manager')->warning('Storage assignment @id references a non-existent storage unit.', ['@id' => $assignment->id()]);
+        continue;
+      }
+      if (!$user) {
+        $this->getLogger('storage_manager')->warning('Storage assignment @id references a non-existent user.', ['@id' => $assignment->id()]);
+        continue;
+      }
+
       $start_raw = $assignment->get('field_storage_start_date')->value;
       $end_raw = $assignment->get('field_storage_end_date')->value;
 
@@ -257,11 +277,13 @@ class DashboardController extends ControllerBase {
           : $this->t('Active');
       }
       elseif (!empty($violations)) {
-        $latest = $violations[0];
-        $total_due = $latest->get('field_storage_vi_total')->value;
-        $violation_label = $total_due !== NULL && $total_due !== ''
-          ? $this->t('Resolved · $@amount', ['@amount' => number_format((float) $total_due, 2)])
-          : $this->t('Resolved');
+        $latest = $violations[0] ?? NULL;
+        if ($latest) {
+          $total_due = $latest->get('field_storage_vi_total')->value;
+          $violation_label = $total_due !== NULL && $total_due !== ''
+            ? $this->t('Resolved · $@amount', ['@amount' => number_format((float) $total_due, 2)])
+            : $this->t('Resolved');
+        }
       }
 
       $rows[] = [
@@ -399,16 +421,20 @@ class DashboardController extends ControllerBase {
     ];
 
     foreach ($sections as $key => $section) {
-      $build[$key . '_heading'] = [
-        '#type' => 'html_tag',
-        '#tag' => 'h2',
-        '#value' => $section['heading'],
-        '#attributes' => ['class' => ['storage-manager-hub__heading']],
-      ];
-      $build[$key . '_links'] = [
-        '#theme' => 'links',
-        '#attributes' => ['class' => ['storage-manager-links', 'storage-manager-links--' . $key]],
-        '#links' => $section['links'],
+      $build[$key] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['storage-manager-hub__section']],
+        'heading' => [
+          '#type' => 'html_tag',
+          '#tag' => 'h2',
+          '#value' => $section['heading'],
+          '#attributes' => ['class' => ['storage-manager-hub__heading']],
+        ],
+        'links' => [
+          '#theme' => 'links',
+          '#attributes' => ['class' => ['storage-manager-links']],
+          '#links' => $section['links'],
+        ],
       ];
     }
 

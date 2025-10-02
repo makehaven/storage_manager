@@ -29,3 +29,24 @@
   background-color: #e0f2fe;
   color: #0c4a6e;
 }
+
+.storage-manager-hub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.storage-manager-hub__section {
+  flex: 1 1 30%;
+}
+
+.storage-manager-hub__heading {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.storage-manager-links {
+  margin-top: 0.5rem;
+  padding-left: 0;
+}
