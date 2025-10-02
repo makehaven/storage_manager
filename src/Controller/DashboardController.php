@@ -107,10 +107,6 @@ class DashboardController extends ControllerBase {
       }
 
       $operations = [];
-      $operations['edit_unit'] = [
-        'title' => $this->t('Edit Unit'),
-        'url' => Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()]),
-      ];
 
       if ($assignment) {
         $operations['release_unit'] = [
@@ -129,6 +125,11 @@ class DashboardController extends ControllerBase {
         ];
       }
 
+      $operations['edit_unit'] = [
+        'title' => $this->t('Edit Unit'),
+        'url' => Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()]),
+      ];
+
       if ($assignment) {
         $operations['edit_assignment'] = [
           'title' => $this->t('Edit Assignment'),
@@ -144,7 +145,7 @@ class DashboardController extends ControllerBase {
         else {
           $operations['add_violation'] = [
             'title' => $this->t('Add Violation'),
-            'url' => Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()]),
+            'url' => Url::fromRoute('storage_manager.start_violation', ['storage_assignment' => $assignment->id()]),
           ];
         }
       }
@@ -278,8 +279,9 @@ class DashboardController extends ControllerBase {
           : $this->t('Resolved');
       }
 
+      $unit_id_val = $unit ? $unit->get('field_storage_unit_id')->value : NULL;
       $rows[] = [
-        ($unit ? $unit->get('field_storage_unit_id')->value : NULL) ?? '—',
+        $unit_id_val ?? '—',
         $user?->label() ?? '—',
         $start,
         $end,
