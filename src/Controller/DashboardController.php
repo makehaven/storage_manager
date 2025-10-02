@@ -62,9 +62,7 @@ class DashboardController extends ControllerBase {
         if ($member_entity) {
           $member = Link::fromTextAndUrl(
             $member_entity->label(),
-            Url::fromRoute('storage_manager.history', [], [
-              'query' => ['user' => $member_entity->id()],
-            ])
+            Url::fromRoute('entity.user.canonical', ['user' => $member_entity->id()])
           )->toString();
         }
 
@@ -115,17 +113,19 @@ class DashboardController extends ControllerBase {
             'query' => ['destination' => '/admin/storage'],
           ]),
         ];
-        $edit_label = $violation_manager->loadActiveViolation((int) $assignment->id())
+        $edit_label = $active_violation
           ? $this->t('Resolve Violation')
           : $this->t('Edit Assignment');
         $ops['edit_assignment'] = [
           'title' => $edit_label,
           'url' => Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()]),
         ];
-        $ops['add_violation'] = [
-          'title' => $this->t('Add Violation'),
-          'url' => Url::fromRoute('storage_manager.start_violation', ['storage_assignment' => $assignment->id()]),
-        ];
+        if (!$active_violation) {
+          $ops['add_violation'] = [
+            'title' => $this->t('Add Violation'),
+            'url' => Url::fromRoute('storage_manager.start_violation', ['storage_assignment' => $assignment->id()]),
+          ];
+        }
       }
       else {
         // Vacant unit.
