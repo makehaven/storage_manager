@@ -89,8 +89,8 @@ storage_manager.start_violation:
 storage_manager.user_release:
   path: '/user/storage/release/{storage_assignment}'
   defaults:
+    _entity_form: 'storage_assignment.user-release'
     _title: 'Confirm Release'
-    _form: '\Drupal\storage_manager\Form\UserReleaseForm'
   requirements:
     _permission: 'claim storage unit'
   options:

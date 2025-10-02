@@ -10,3 +10,11 @@ uid: true
 created: true
 changed: true
 title: false
+handlers:
+  access: Drupal\eck\EckAccessControlHandler
+  views_data: Drupal\eck\EckViewsData
+  router_provider: Drupal\eck\EckEntityRouteProvider
+  form:
+    default: Drupal\eck\Form\EckEntityForm
+    delete: Drupal\eck\Form\EckDeleteForm
+    user-release: Drupal\storage_manager\Form\UserReleaseForm

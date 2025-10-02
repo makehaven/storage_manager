@@ -277,9 +277,8 @@ class DashboardController extends ControllerBase {
           : $this->t('Resolved');
       }
 
-      $unit_id_val = $unit ? $unit->get('field_storage_unit_id')->value : NULL;
       $rows[] = [
-        $unit_id_val ?? '—',
+        $unit?->get('field_storage_unit_id')?->value ?? '—',
         $user?->label() ?? '—',
         $start,
         $end,
