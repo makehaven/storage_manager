@@ -4,6 +4,7 @@ claim_agreement:
 release_confirmation_message: 'I have totally cleaned out the storage area and removed my name. I understand I will be charged for cleanup and disposal if items are left or the storage area is in bad condition.'
 violation:
   default_daily_rate: '0.00'
+  grace_period: 48
 notifications:
   enabled_events:
     - assignment

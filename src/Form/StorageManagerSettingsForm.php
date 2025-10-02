@@ -68,6 +68,14 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       '#description' => $this->t('Base daily charge applied when a violation is active. Individual assignments can override this amount.'),
     ];
 
+    $form['violation']['grace_period'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Violation grace period (hours)'),
+      '#default_value' => $config->get('violation.grace_period') ?? 48,
+      '#min' => '0',
+      '#description' => $this->t('The number of hours after a violation is recorded before daily charges begin to accrue. A warning email is sent immediately when the violation is recorded.'),
+    ];
+
     $events = $this->getNotificationEvents();
     $enabled = $config->get('notifications.enabled_events') ?? [];
     $default_enabled = [];
@@ -155,6 +163,7 @@ class StorageManagerSettingsForm extends ConfigFormBase {
     $config->set('claim_agreement', $agreement);
     $default_daily = $form_state->getValue('default_daily_rate');
     $config->set('violation.default_daily_rate', $default_daily === '' || $default_daily === NULL ? '0.00' : number_format((float) $default_daily, 2, '.', ''));
+    $config->set('violation.grace_period', (int) $form_state->getValue('grace_period'));
     $events = $this->getNotificationEvents();
 
     $enabled_values = $form_state->getValue('enabled_events') ?? [];
