@@ -277,11 +277,13 @@ class DashboardController extends ControllerBase {
           : $this->t('Active');
       }
       elseif (!empty($violations)) {
-        $latest = $violations[0];
-        $total_due = $latest->get('field_storage_vi_total')->value;
-        $violation_label = $total_due !== NULL && $total_due !== ''
-          ? $this->t('Resolved · $@amount', ['@amount' => number_format((float) $total_due, 2)])
-          : $this->t('Resolved');
+        $latest = $violations[0] ?? NULL;
+        if ($latest) {
+          $total_due = $latest->get('field_storage_vi_total')->value;
+          $violation_label = $total_due !== NULL && $total_due !== ''
+            ? $this->t('Resolved · $@amount', ['@amount' => number_format((float) $total_due, 2)])
+            : $this->t('Resolved');
+        }
       }
 
       $rows[] = [
