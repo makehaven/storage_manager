@@ -106,35 +106,46 @@ class DashboardController extends ControllerBase {
         }
       }
 
-      $ops = [];
-      $ops[] = Link::fromTextAndUrl($this->t('Edit Unit'),
-        Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()])
-      )->toString();
+      $operations = [];
+      $operations['edit_unit'] = [
+        'title' => $this->t('Edit Unit'),
+        'url' => Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()]),
+      ];
 
       if ($assignment) {
-        $ops[] = Link::fromTextAndUrl($this->t('Release Unit'),
-          Url::fromRoute('storage_manager.unit_release', ['storage_unit' => $unit->id()], [
+        $operations['release_unit'] = [
+          'title' => $this->t('Release Unit'),
+          'url' => Url::fromRoute('storage_manager.unit_release', ['storage_unit' => $unit->id()], [
             'query' => ['destination' => '/admin/storage'],
-          ])
-        )->toString();
+          ]),
+        ];
       }
       else {
-        $ops[] = Link::fromTextAndUrl($this->t('Assign Unit'),
-          Url::fromRoute('storage_manager.unit_assign', ['storage_unit' => $unit->id()], [
+        $operations['assign_unit'] = [
+          'title' => $this->t('Assign Unit'),
+          'url' => Url::fromRoute('storage_manager.unit_assign', ['storage_unit' => $unit->id()], [
             'query' => ['destination' => '/admin/storage'],
-          ])
-        )->toString();
+          ]),
+        ];
       }
 
       if ($assignment) {
-        $ops[] = Link::fromTextAndUrl($this->t('Edit Assignment'),
-          Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()])
-        )->toString();
+        $operations['edit_assignment'] = [
+          'title' => $this->t('Edit Assignment'),
+          'url' => Url::fromRoute('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()]),
+        ];
 
         if ($violation_manager->loadActiveViolation((int) $assignment->id())) {
-          $ops[] = Link::fromTextAndUrl($this->t('Edit Active Violation'),
-            Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()])
-          )->toString();
+          $operations['edit_violation'] = [
+            'title' => $this->t('Edit Active Violation'),
+            'url' => Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()]),
+          ];
+        }
+        else {
+          $operations['add_violation'] = [
+            'title' => $this->t('Add Violation'),
+            'url' => Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()]),
+          ];
         }
       }
 
@@ -158,7 +169,7 @@ class DashboardController extends ControllerBase {
         ['data' => $status_render],
         $violation_summary,
         $member,
-        ['data' => ['#markup' => implode(' | ', $ops)]],
+        ['data' => ['#type' => 'dropbutton', '#links' => $operations]],
       ];
     }
 
