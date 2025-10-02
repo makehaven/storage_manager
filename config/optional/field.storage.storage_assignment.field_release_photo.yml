@@ -1,0 +1,31 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+    - file
+    - image
+id: storage_assignment.field_release_photo
+field_name: field_release_photo
+entity_type: storage_assignment
+type: image
+settings:
+  uri_scheme: public
+  default_image:
+    uuid: ''
+    alt: ''
+    title: ''
+    width: null
+    height: null
+  target_type: file
+  display_field: false
+  display_default: false
+module: image
+locked: false
+cardinality: 1
+translatable: true
+indexes:
+  target_id:
+    - target_id
+persist_with_no_fields: false
+custom_storage: false

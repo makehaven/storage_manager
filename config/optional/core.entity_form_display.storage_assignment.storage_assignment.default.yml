@@ -144,5 +144,13 @@ content:
       size: 60
       placeholder: ''
     third_party_settings: { }
+  field_release_photo:
+    type: image_image
+    weight: 25
+    region: content
+    settings:
+      progress_indicator: throbber
+      preview_image_style: thumbnail
+    third_party_settings: { }
 hidden:
   uuid: true
