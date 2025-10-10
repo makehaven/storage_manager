@@ -49,17 +49,40 @@ lando drush storage_manager:import-config
 lando drush cr
 ```
 
-### Pantheon / Terminus cheat sheet (site: `makehaven-website`)
+### Pantheon / Terminus scripts (site: `makehaven-website`)
 
-Copy the following block and replace the environment (`dev`, `test`, or `live`) as needed:
+The following shell snippet works for `dev`, `test`, and `live`. Replace `<ENV>` with the environment name on the first line and run the whole block in your terminal. It keeps PHP’s time limit at zero so you don’t hit the 120‑second cap, and it retries the import automatically until everything is installed.
 
+```bash
+SITE=makehaven-website
+ENV=dev    # change to test or live when promoting
+
+# dev requires SFTP mode so schema can be created
+if [ "$ENV" = "dev" ]; then
+  terminus connection:set $SITE.$ENV sftp
+fi
+
+DRUSH="terminus drush $SITE.$ENV -- ssh \"cd /code && php -d max_execution_time=0 /usr/local/bin/drush\""
+
+eval $DRUSH "en storage_manager -y"
+
+while true; do
+  OUTPUT=$(eval $DRUSH "storage_manager:import-config" 2>&1)
+  echo "$OUTPUT"
+  if ! grep -qi 'pending' <<< "$OUTPUT"; then
+    break
+  fi
+  sleep 5
+done
+
+eval $DRUSH "cr"
+
+if [ "$ENV" = "dev" ]; then
+  terminus connection:set $SITE.$ENV git
+fi
 ```
-terminus drush makehaven-website.dev -- en storage_manager -y
-terminus drush makehaven-website.dev -- storage_manager:import-config
-terminus drush makehaven-website.dev -- cr
-```
 
-Repeat with `.test` or `.live` when promoting. If the storage configuration already lives in Pantheon’s `config/sync`, you can replace the two partial imports with a single `terminus drush makehaven-website.<env> -- cim -y`.
+If the storage configuration already lives in Pantheon’s `config/sync`, you can replace the import loop with a single `terminus drush $SITE.$ENV -- cim -y`.
 
 ### Manual fallback (only if you skip config import)
 
