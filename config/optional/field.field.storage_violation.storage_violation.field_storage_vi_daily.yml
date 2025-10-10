@@ -6,7 +6,7 @@ dependencies:
     - eck.eck_type.storage_violation.storage_violation
     - field.storage.storage_violation.field_storage_vi_daily
   module:
-    - number
+    - field
 id: storage_violation.storage_violation.field_storage_vi_daily
 field_name: field_storage_vi_daily
 entity_type: storage_violation
@@ -15,7 +15,7 @@ label: 'Daily rate override'
 description: 'Daily charge applied while the violation is active.'
 required: false
 translatable: false
-default_value: { }
+default_value: {  }
 default_value_callback: ''
 settings:
   min: null

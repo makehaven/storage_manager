@@ -20,7 +20,7 @@ dependencies:
     - field.field.storage_assignment.storage_assignment.field_storage_complimentary
   module:
     - datetime
-    - number
+    - field
     - options
 id: storage_assignment.storage_assignment.default
 targetEntityType: storage_assignment
@@ -32,22 +32,22 @@ content:
     type: list_default
     weight: 0
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_storage_start_date:
     label: above
     type: datetime_default
     weight: 1
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_storage_end_date:
     label: above
     type: datetime_default
     weight: 2
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_storage_unit:
     label: above
     type: entity_reference_label
@@ -55,7 +55,7 @@ content:
     region: content
     settings:
       link: true
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_user:
     label: above
     type: entity_reference_label
@@ -63,7 +63,7 @@ content:
     region: content
     settings:
       link: true
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_price_snapshot:
     label: above
     type: number_decimal
@@ -74,7 +74,7 @@ content:
       decimal_separator: .
       scale: 2
       prefix_suffix: true
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_violation_flag:
     label: above
     type: boolean
@@ -84,14 +84,14 @@ content:
       format: default
       format_custom_false: ''
       format_custom_true: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_violation_start:
     label: above
     type: datetime_default
     weight: 7
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_violation_daily_rate:
     label: above
     type: number_decimal
@@ -102,14 +102,14 @@ content:
       decimal_separator: .
       scale: 2
       prefix_suffix: true
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_violation_resolved:
     label: above
     type: datetime_default
     weight: 9
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_violation_total_due:
     label: above
     type: number_decimal
@@ -120,14 +120,14 @@ content:
       decimal_separator: .
       scale: 2
       prefix_suffix: true
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_issue_note:
     label: above
     type: text_default
     weight: 11
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_storage_complimentary:
     label: above
     type: boolean
@@ -137,7 +137,7 @@ content:
       format: default
       format_custom_false: ''
       format_custom_true: ''
-    third_party_settings: { }
+    third_party_settings: {  }
 hidden:
   created: true
   changed: true

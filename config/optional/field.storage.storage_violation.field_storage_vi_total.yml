@@ -5,7 +5,7 @@ dependencies:
   config:
     - eck.eck_entity_type.storage_violation
   module:
-    - number
+    - field
 id: storage_violation.field_storage_vi_total
 field_name: field_storage_vi_total
 entity_type: storage_violation
@@ -13,10 +13,10 @@ type: decimal
 settings:
   precision: 10
   scale: 2
-module: number
+module: field
 locked: false
 cardinality: 1
 translatable: true
-indexes: { }
+indexes: {  }
 persist_with_no_fields: false
 custom_storage: false

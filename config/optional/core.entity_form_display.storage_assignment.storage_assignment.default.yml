@@ -20,7 +20,7 @@ dependencies:
     - field.field.storage_assignment.storage_assignment.field_storage_complimentary
   module:
     - datetime
-    - number
+    - field
     - options
 id: storage_assignment.storage_assignment.default
 targetEntityType: storage_assignment
@@ -31,66 +31,66 @@ content:
     type: datetime_timestamp
     weight: 10
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_storage_assignment_status:
     type: options_select
     weight: 15
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_storage_end_date:
     type: datetime_default
     weight: 14
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_storage_price_snapshot:
     type: number
     weight: 16
     region: content
     settings:
       placeholder: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_violation_flag:
     type: boolean_checkbox
     weight: 20
     region: content
     settings:
       display_label: true
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_violation_start:
     type: datetime_default
     weight: 21
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_violation_daily_rate:
     type: number
     weight: 22
     region: content
     settings:
       placeholder: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_violation_resolved:
     type: datetime_default
     weight: 23
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_violation_total_due:
     type: number
     weight: 24
     region: content
     settings:
       placeholder: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_start_date:
     type: datetime_default
     weight: 13
     region: content
-    settings: { }
-    third_party_settings: { }
+    settings: {  }
+    third_party_settings: {  }
   field_storage_stripe_sub_id:
     type: string_textfield
     weight: 19
@@ -98,7 +98,7 @@ content:
     settings:
       size: 60
       placeholder: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_unit:
     type: entity_reference_autocomplete
     weight: 11
@@ -108,7 +108,7 @@ content:
       match_limit: 10
       size: 60
       placeholder: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_user:
     type: entity_reference_autocomplete
     weight: 12
@@ -118,14 +118,14 @@ content:
       match_limit: 10
       size: 60
       placeholder: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_complimentary:
     type: boolean_checkbox
     weight: 18
     region: content
     settings:
       display_label: true
-    third_party_settings: { }
+    third_party_settings: {  }
   uid:
     type: entity_reference_autocomplete
     weight: 5
@@ -135,7 +135,7 @@ content:
       match_limit: 10
       size: 60
       placeholder: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_storage_issue_note:
     type: string_textarea
     weight: 17
@@ -143,7 +143,7 @@ content:
     settings:
       rows: 5
       placeholder: ''
-    third_party_settings: { }
+    third_party_settings: {  }
   field_release_photo:
     type: image_image
     weight: 25
@@ -151,6 +151,6 @@ content:
     settings:
       progress_indicator: throbber
       preview_image_style: thumbnail
-    third_party_settings: { }
+    third_party_settings: {  }
 hidden:
   uuid: true

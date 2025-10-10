@@ -4,7 +4,7 @@ dependencies:
   config:
     - eck.eck_entity_type.storage_assignment
   module:
-    - number
+    - field
 id: storage_assignment.field_violation_total_due
 field_name: field_violation_total_due
 entity_type: storage_assignment
@@ -12,10 +12,10 @@ type: decimal
 settings:
   precision: 10
   scale: 2
-module: number
+module: field
 locked: false
 cardinality: 1
 translatable: true
-indexes: { }
+indexes: {  }
 persist_with_no_fields: false
 custom_storage: false

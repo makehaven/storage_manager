@@ -6,7 +6,7 @@ dependencies:
     - eck.eck_type.storage_violation.storage_violation
     - field.storage.storage_violation.field_storage_vi_total
   module:
-    - number
+    - field
 id: storage_violation.storage_violation.field_storage_vi_total
 field_name: field_storage_vi_total
 entity_type: storage_violation
@@ -15,7 +15,7 @@ label: 'Total due'
 description: 'Total amount owed when the violation is resolved.'
 required: false
 translatable: false
-default_value: { }
+default_value: {  }
 default_value_callback: ''
 settings:
   min: null
