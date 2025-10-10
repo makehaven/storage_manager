@@ -1,0 +1,5 @@
+services:
+  storage_manager.commands:
+    class: Drupal\storage_manager\Commands\StorageManagerCommands
+    tags:
+      - { name: drush.command }

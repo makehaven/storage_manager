@@ -5,11 +5,20 @@
  * Install, update, and uninstall functions for the Storage Manager module.
  */
 
+use Drupal\Core\Config\FileStorage;
+use Drupal\Core\Config\MemoryStorage;
+use Drupal\Core\Database\DatabaseExceptionWrapper;
+use Drupal\Core\Entity\Entity\EntityFormDisplay;
+use Drupal\Core\Entity\EntityDefinitionUpdateManagerInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\taxonomy\Entity\Term;
+
 /**
  * Implements hook_install().
  */
 function storage_manager_install(): void {
-  // No-op: configuration must be imported manually.
+  // No automatic configuration; configuration is imported via drush command.
 }
 
 /**
@@ -17,4 +26,255 @@ function storage_manager_install(): void {
  */
 function storage_manager_uninstall(): void {
   // No-op.
+}
+
+/**
+ * Import Storage Manager configuration files with basic dependency handling.
+ *
+ * @param array|null $directories
+ *   Optional list of directories to scan. Defaults to the module's
+ *   config/install and config/optional directories.
+ */
+function storage_manager_import_config(?array $directories = NULL): void {
+  $config_storage = \Drupal::service('config.storage');
+  $config_installer = \Drupal::service('config.installer');
+
+  $module_path = \Drupal::service('extension.list.module')->getPath('storage_manager');
+  $directories = $directories ?? [
+    $module_path . '/config/install',
+    $module_path . '/config/optional',
+  ];
+
+  $buckets = [
+    'entity_type' => [],
+    'entity_bundle' => [],
+    'field_storage' => [],
+    'field_config' => [],
+    'display' => [],
+    'other' => [],
+  ];
+
+  foreach ($directories as $path) {
+    if (!is_dir($path)) {
+      continue;
+    }
+    $source_storage = new FileStorage($path);
+    foreach ($source_storage->listAll() as $config_name) {
+      if ($config_storage->exists($config_name)) {
+        continue;
+      }
+      $data = $source_storage->read($config_name);
+      if (str_starts_with($config_name, 'eck.eck_entity_type.')) {
+        $buckets['entity_type'][$config_name] = $data;
+      }
+      elseif (str_starts_with($config_name, 'eck.eck_type.')) {
+        $buckets['entity_bundle'][$config_name] = $data;
+      }
+      elseif (str_starts_with($config_name, 'field.storage.')) {
+        $buckets['field_storage'][$config_name] = $data;
+      }
+      elseif (str_starts_with($config_name, 'field.field.')) {
+        $buckets['field_config'][$config_name] = $data;
+      }
+      elseif (str_starts_with($config_name, 'core.entity_form_display.') || str_starts_with($config_name, 'core.entity_view_display.')) {
+        $buckets['display'][$config_name] = $data;
+      }
+      else {
+        $buckets['other'][$config_name] = $data;
+      }
+    }
+  }
+
+  foreach (['entity_type', 'entity_bundle', 'field_storage', 'field_config', 'display', 'other'] as $bucket_key) {
+    $pending = $buckets[$bucket_key];
+    $attempts = 0;
+
+    while (!empty($pending) && $attempts < 5) {
+      $memory = new MemoryStorage();
+      foreach ($pending as $config_name => $data) {
+        if (!_storage_manager_dependencies_met($data, $config_storage)) {
+          continue;
+        }
+        $memory->write($config_name, $data);
+        unset($pending[$config_name]);
+      }
+
+      if ($memory->listAll()) {
+        try {
+          $config_installer->installOptionalConfig($memory);
+        }
+        catch (\Throwable $throwable) {
+          foreach ($memory->listAll() as $config_name) {
+            \Drupal::logger('storage_manager')->error('Failed to import config %name: @message', [
+              '%name' => $config_name,
+              '@message' => $throwable->getMessage(),
+            ]);
+            $pending[$config_name] = $memory->read($config_name);
+          }
+        }
+      }
+
+      _storage_manager_apply_entity_definition_updates();
+      \Drupal::service('entity_type.manager')->clearCachedDefinitions();
+      \Drupal::service('entity_field.manager')->clearCachedFieldDefinitions();
+
+      $attempts++;
+    }
+
+    if (!empty($pending)) {
+      \Drupal::logger('storage_manager')->warning('Configuration items still pending after import attempts: @items', [
+        '@items' => implode(', ', array_keys($pending)),
+      ]);
+    }
+  }
+}
+
+/**
+ * Applies any pending entity definition updates for storage entities.
+ *
+ * @return int
+ *   Number of applied updates.
+ */
+function _storage_manager_apply_entity_definition_updates(): int {
+  $update_manager = \Drupal::entityDefinitionUpdateManager();
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $field_manager = \Drupal::service('entity_field.manager');
+  $last_installed = \Drupal::service('entity.last_installed_schema.repository');
+
+  $applied = 0;
+  $change_list = $update_manager->getChangeList();
+
+  foreach ($change_list as $entity_type_id => $changes) {
+    if (!empty($changes['entity_type'])) {
+      $definition = $entity_type_manager->getDefinition($entity_type_id, FALSE);
+      if ($definition) {
+        if ($changes['entity_type'] === EntityDefinitionUpdateManagerInterface::DEFINITION_CREATED) {
+          $update_manager->installEntityType($definition);
+          $applied++;
+        }
+        elseif ($changes['entity_type'] === EntityDefinitionUpdateManagerInterface::DEFINITION_UPDATED) {
+          $update_manager->updateEntityType($definition);
+          $applied++;
+        }
+      }
+    }
+
+    if (empty($changes['field_storage_definitions'])) {
+      continue;
+    }
+
+    $field_definitions = $field_manager->getFieldStorageDefinitions($entity_type_id);
+    $original_definitions = $last_installed->getLastInstalledFieldStorageDefinitions($entity_type_id);
+
+    foreach ($changes['field_storage_definitions'] as $field_name => $change_type) {
+      try {
+        if ($change_type === EntityDefinitionUpdateManagerInterface::DEFINITION_CREATED && isset($field_definitions[$field_name])) {
+          $definition = $field_definitions[$field_name];
+          $update_manager->installFieldStorageDefinition($field_name, $entity_type_id, $definition->getProvider(), $definition);
+          $applied++;
+        }
+        elseif ($change_type === EntityDefinitionUpdateManagerInterface::DEFINITION_UPDATED && isset($field_definitions[$field_name])) {
+          $update_manager->updateFieldStorageDefinition($field_definitions[$field_name]);
+          $applied++;
+        }
+        elseif ($change_type === EntityDefinitionUpdateManagerInterface::DEFINITION_DELETED && isset($original_definitions[$field_name])) {
+          $update_manager->uninstallFieldStorageDefinition($original_definitions[$field_name]);
+          $applied++;
+        }
+      }
+      catch (DatabaseExceptionWrapper $exception) {
+        if (str_contains($exception->getMessage(), 'Base table or view not found')) {
+          \Drupal::logger('storage_manager')->warning('Skipped removing field %field from %entity because storage tables were missing.', [
+            '%field' => $field_name,
+            '%entity' => $entity_type_id,
+          ]);
+          continue;
+        }
+        throw $exception;
+      }
+    }
+  }
+
+  return $applied;
+}
+
+/**
+ * Checks whether configuration dependencies exist before install.
+ */
+function _storage_manager_dependencies_met(array $data, $config_storage): bool {
+  $dependencies = $data['dependencies'] ?? [];
+  $module_handler = \Drupal::moduleHandler();
+
+  $module_dependencies = [];
+  if (!empty($dependencies['module']) && is_array($dependencies['module'])) {
+    $module_dependencies = array_merge($module_dependencies, $dependencies['module']);
+  }
+  if (!empty($dependencies['enforced']['module']) && is_array($dependencies['enforced']['module'])) {
+    $module_dependencies = array_merge($module_dependencies, $dependencies['enforced']['module']);
+  }
+  foreach ($module_dependencies as $module_id) {
+    if (!$module_handler->moduleExists($module_id)) {
+      return FALSE;
+    }
+  }
+
+  $config_dependencies = [];
+  if (!empty($dependencies['config']) && is_array($dependencies['config'])) {
+    $config_dependencies = array_merge($config_dependencies, $dependencies['config']);
+  }
+  if (!empty($dependencies['enforced']['config']) && is_array($dependencies['enforced']['config'])) {
+    $config_dependencies = array_merge($config_dependencies, $dependencies['enforced']['config']);
+  }
+  foreach ($config_dependencies as $dependency_name) {
+    if (!$config_storage->exists($dependency_name)) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+ * Seed a default storage area term if missing.
+ */
+function _storage_manager_seed_storage_areas(): void {
+  $vid = 'storage_area';
+  $default_name = 'Basement Back Room';
+  $exists = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->getQuery()
+    ->condition('vid', $vid)
+    ->condition('name', $default_name)
+    ->accessCheck(FALSE)
+    ->range(0, 1)
+    ->execute();
+  if (!$exists) {
+    Term::create(['vid' => $vid, 'name' => $default_name])->save();
+  }
+}
+
+/**
+ * Seed sample storage types if missing.
+ */
+function _storage_manager_seed_storage_types(): void {
+  $vid = 'storage_type';
+  $defaults = [
+    ['name' => 'Small Storage Bin', 'price' => '6.00'],
+    ['name' => 'Large Storage Bin', 'price' => '12.00'],
+  ];
+  $storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+  foreach ($defaults as $default) {
+    $ids = $storage->getQuery()
+      ->condition('vid', $vid)
+      ->condition('name', $default['name'])
+      ->accessCheck(FALSE)
+      ->range(0, 1)
+      ->execute();
+    if ($ids) {
+      continue;
+    }
+    $term = Term::create(['vid' => $vid, 'name' => $default['name']]);
+    if ($term->hasField('field_monthly_price')) {
+      $term->set('field_monthly_price', $default['price']);
+    }
+    $term->save();
+  }
 }

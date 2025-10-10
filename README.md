@@ -45,8 +45,7 @@ Until the configuration is imported you will see watchdog notices about missing 
 
 ```
 lando drush en storage_manager -y
-lando drush config:import --partial --source=/app/web/modules/custom/storage_manager/config/install -y
-lando drush config:import --partial --source=/app/web/modules/custom/storage_manager/config/optional -y
+lando drush storage_manager:import-config
 lando drush cr
 ```
 
@@ -56,8 +55,7 @@ Copy the following block and replace the environment (`dev`, `test`, or `live`) 
 
 ```
 terminus drush makehaven-website.dev -- en storage_manager -y
-terminus drush makehaven-website.dev -- config:import --partial --source=$(terminus drush makehaven-website.dev -- php:eval 'echo DRUPAL_ROOT;')/modules/custom/storage_manager/config/install -y
-terminus drush makehaven-website.dev -- config:import --partial --source=$(terminus drush makehaven-website.dev -- php:eval 'echo DRUPAL_ROOT;')/modules/custom/storage_manager/config/optional -y
+terminus drush makehaven-website.dev -- storage_manager:import-config
 terminus drush makehaven-website.dev -- cr
 ```
 
@@ -69,4 +67,4 @@ Repeat with `.test` or `.live` when promoting. If the storage configuration alre
 - Add the ECK entity types `storage_unit`, `storage_assignment`, `storage_violation` and their bundles.
 - Recreate every field storage/instance from `config/optional/`.
 
-After any approach, review the form/view displays (e.g. expose `field_monthly_price` on the Storage Type form) to suit your editors.
+After any approach (command or manual), review the form/view displays (e.g. expose `field_monthly_price` on the Storage Type form) to suit your editors.
