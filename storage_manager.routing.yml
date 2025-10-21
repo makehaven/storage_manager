@@ -97,3 +97,23 @@ storage_manager.user_release:
     parameters:
       storage_assignment:
         type: entity:storage_assignment
+
+storage_manager_billing.sub_create_or_open:
+  path: '/admin/storage/subscription/{assignment}'
+  defaults:
+    _controller: '\Drupal\storage_manager\Controller\StorageSubController::createOrOpen'
+    _title: 'Create or Open Stripe Subscription'
+  requirements:
+    _permission: 'manage storage billing'
+  options:
+    parameters:
+      assignment:
+        type: entity:storage_assignment
+
+storage_manager_billing.portal:
+  path: '/billing/storage/invoices'
+  defaults:
+    _controller: '\Drupal\storage_manager\Controller\StoragePortalController::portal'
+    _title: 'View Storage Invoices'
+  requirements:
+    _role: 'authenticated'

@@ -2,6 +2,7 @@
 
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityStorageException;
+use Drupal\Core\Url;
 
 /**
  * @file
@@ -60,4 +61,19 @@ function storage_manager_entity_type_alter(array &$entity_types) {
   if (isset($entity_types['storage_assignment'])) {
     $entity_types['storage_assignment']->setFormClass('user-release', 'Drupal\storage_manager\Form\UserReleaseForm');
   }
+}
+
+/**
+ * Implements hook_entity_operation().
+ */
+function storage_manager_entity_operation(EntityInterface $entity) {
+  $operations = [];
+  if ($entity->getEntityTypeId() === 'storage_assignment' && $entity->hasLinkTemplate('canonical')) {
+    $operations['stripe_subscription'] = [
+      'title' => t('Create/Open Stripe Subscription'),
+      'weight' => 100,
+      'url' => Url::fromRoute('storage_manager_billing.sub_create_or_open', ['assignment' => $entity->id()]),
+    ];
+  }
+  return $operations;
 }

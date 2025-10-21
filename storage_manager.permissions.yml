@@ -1,8 +1,9 @@
 manage storage:
-  title: 'Manage storage units and assignments'
-  description: 'Assign/release storage and resolve issues'
-  restrict: true
-
+  title: 'Manage storage'
+  description: 'Allows users to manage storage units, assignments, and violations.'
 claim storage unit:
-  title: 'Claim a storage unit'
-  description: 'Allow users to self-assign vacant storage units through the claim page.'
+  title: 'Claim storage unit'
+  description: 'Allows users to claim a storage unit.'
+manage storage billing:
+  title: 'Manage storage billing'
+  description: 'Allows users to create and manage Stripe subscriptions for storage assignments.'
