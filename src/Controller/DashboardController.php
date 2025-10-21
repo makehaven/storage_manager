@@ -78,12 +78,15 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         $data['total_units'],
         $data['occupied_units'],
         sprintf('%.2f%%', $data['vacancy_rate']),
+        '$' . number_format($data['billed_value'], 2),
+        '$' . number_format($data['complimentary_value'], 2),
         '$' . number_format($data['potential_value'], 2),
+        '$' . number_format($data['total_inventory_value'], 2),
       ];
     }
     $build['by_type']['table'] = [
       '#type' => 'table',
-      '#header' => [$this->t('Type'), $this->t('Total'), $this->t('Occupied'), $this->t('Vacancy Rate'), $this->t('Potential Value')],
+      '#header' => [$this->t('Type'), $this->t('Total'), $this->t('Occupied'), $this->t('Vacancy Rate'), $this->t('Billed Value'), $this->t('Complimentary Value'), $this->t('Potential Value'), $this->t('Total Inventory Value')],
       '#rows' => $type_rows,
     ];
 
@@ -99,13 +102,30 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         $data['total_units'],
         $data['occupied_units'],
         sprintf('%.2f%%', $data['vacancy_rate']),
+        '$' . number_format($data['billed_value'], 2),
+        '$' . number_format($data['complimentary_value'], 2),
         '$' . number_format($data['potential_value'], 2),
+        '$' . number_format($data['total_inventory_value'], 2),
       ];
     }
     $build['by_area']['table'] = [
       '#type' => 'table',
-      '#header' => [$this->t('Area'), $this->t('Total'), $this->t('Occupied'), $this->t('Vacancy Rate'), $this->t('Potential Value')],
+      '#header' => [$this->t('Area'), $this->t('Total'), $this->t('Occupied'), $this->t('Vacancy Rate'), $this->t('Billed Value'), $this->t('Complimentary Value'), $this->t('Potential Value'), $this->t('Total Inventory Value')],
       '#rows' => $area_rows,
+    ];
+
+    // Violations.
+    $build['violations'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Violations'),
+    ];
+    $build['violations']['table'] = [
+      '#type' => 'table',
+      '#header' => [$this->t('Metric'), $this->t('Value')],
+      '#rows' => [
+        [$this->t('Active violations'), $stats['violations']['active_violations']],
+        [$this->t('Total accrued charges'), '$' . number_format($stats['violations']['total_accrued'], 2)],
+      ],
     ];
 
     return $build;
@@ -121,8 +141,6 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
 
     $build = [];
     $build['#attached']['library'][] = 'storage_manager/admin';
-    $stats = $this->statisticsService->getStatistics();
-    $build['statistics'] = $this->buildStatistics($stats);
     $build['hub_links'] = $this->buildHubLinks();
 
     $unit_storage = $this->entityTypeManager()->getStorage('storage_unit');
@@ -293,6 +311,9 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       '#rows' => $rows,
       '#empty' => $this->t('No storage units found.'),
     ];
+
+    $stats = $this->statisticsService->getStatistics();
+    $build['statistics'] = $this->buildStatistics($stats);
 
     return $build;
   }

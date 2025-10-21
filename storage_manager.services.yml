@@ -28,4 +28,4 @@ services:
 
   storage_manager.statistics_service:
     class: Drupal\storage_manager\Service\StatisticsService
-    arguments: ['@entity_type.manager']
+    arguments: ['@entity_type.manager', '@storage_manager.violation_manager']
