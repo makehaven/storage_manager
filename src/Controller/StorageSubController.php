@@ -26,6 +26,11 @@ final class StorageSubController extends ControllerBase {
    * @return \Symfony\Component\HttpFoundation\RedirectResponse
    */
   public function createOrOpen(ContentEntityInterface $assignment): RedirectResponse {
+    // Permission check.
+    if (!$this->currentUser()->hasPermission('manage storage billing')) {
+      throw new AccessDeniedHttpException();
+    }
+
     // Validate entity type.
     if ($assignment->getEntityTypeId() !== 'storage_assignment') {
       throw new NotFoundHttpException('Invalid entity.');

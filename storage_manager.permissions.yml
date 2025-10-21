@@ -5,5 +5,5 @@ claim storage unit:
   title: 'Claim storage unit'
   description: 'Allows users to claim a storage unit.'
 manage storage billing:
-  title: 'Manage storage billing'
+  title: 'Manage storage billing (Stripe)'
   description: 'Allows users to create and manage Stripe subscriptions for storage assignments.'
