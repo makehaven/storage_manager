@@ -12,3 +12,4 @@ dependencies:
   - drupal:system
   - drupal:datetime
   - drupal:options
+  - mh_stripe:mh_stripe
