@@ -129,7 +129,7 @@ class MemberStorageController extends ControllerBase {
     }
 
     $billing_links = [];
-    if ($this->storageCurrentUser->hasPermission('claim storage unit')) {
+    if ($this->storageCurrentUser->isAuthenticated()) {
       $billing_links[] = [
         'title' => $this->t('View Storage Invoices'),
         'url' => Url::fromRoute('storage_manager_billing.portal'),

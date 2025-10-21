@@ -68,12 +68,14 @@ function storage_manager_entity_type_alter(array &$entity_types) {
  */
 function storage_manager_entity_operation(EntityInterface $entity) {
   $operations = [];
-  if ($entity->getEntityTypeId() === 'storage_assignment' && $entity->hasLinkTemplate('canonical')) {
-    $operations['stripe_subscription'] = [
+
+  if ($entity->getEntityTypeId() === 'storage_assignment' && \Drupal::currentUser()->hasPermission('manage storage billing')) {
+    $operations['stripe_create_or_open'] = [
       'title' => t('Create/Open Stripe Subscription'),
-      'weight' => 100,
+      'weight' => 50,
       'url' => Url::fromRoute('storage_manager_billing.sub_create_or_open', ['assignment' => $entity->id()]),
     ];
   }
+
   return $operations;
 }

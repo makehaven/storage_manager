@@ -102,7 +102,7 @@ storage_manager_billing.sub_create_or_open:
   path: '/admin/storage/subscription/{assignment}'
   defaults:
     _controller: '\Drupal\storage_manager\Controller\StorageSubController::createOrOpen'
-    _title: 'Create or Open Stripe Subscription'
+    _title: 'Create or Open Subscription'
   requirements:
     _permission: 'manage storage billing'
   options:

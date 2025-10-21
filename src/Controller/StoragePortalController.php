@@ -3,63 +3,36 @@
 namespace Drupal\storage_manager\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Url;
 use Drupal\mh_stripe\Service\StripeHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
-/**
- * Controller for member-facing billing portal.
- */
-class StoragePortalController extends ControllerBase implements ContainerInjectionInterface {
+final class StoragePortalController extends ControllerBase {
 
-  /**
-   * The mh_stripe helper service.
-   *
-   * @var \Drupal\mh_stripe\Service\StripeHelper
-   */
-  protected $stripeHelper;
+  public function __construct(private StripeHelper $stripeHelper) {}
 
-  /**
-   * Constructs a new StoragePortalController object.
-   *
-   * @param \Drupal\mh_stripe\Service\StripeHelper $stripe_helper
-   *   The mh_stripe helper service.
-   */
-  public function __construct(StripeHelper $stripe_helper) {
-    $this->stripeHelper = $stripe_helper;
+  public static function create(ContainerInterface $container): self {
+    return new self($container->get('mh_stripe.helper'));
   }
 
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container) {
-    return new static(
-      $container->get('mh_stripe.helper')
-    );
-  }
+  public function portal(): RedirectResponse {
+    if ($this->currentUser()->isAnonymous()) {
+      return new RedirectResponse(Url::fromRoute('user.login')->toString());
+    }
+    $uid = (int) $this->currentUser()->id();
+    $user = $this->entityTypeManager()->getStorage('user')->load($uid);
 
-  /**
-   * Redirects the current user to the Stripe Billing Portal.
-   *
-   * @return \Symfony\Component\HttpFoundation\RedirectResponse
-   *   A redirect response to the Stripe Billing Portal.
-   */
-  public function portal() {
-    $user = $this->currentUser();
-    $customer_id = $user->get('field_stripe_customer_id')->value;
-
+    $customer_id = (string) ($user->get('field_stripe_customer_id')->value ?? '');
     if (!$customer_id) {
-      $this->messenger()->addError($this->t('We could not find your billing information. Please contact staff for assistance.'));
+      $this->messenger()->addError($this->t('We could not find your billing information. Please contact staff.'));
       return $this->redirect('<front>');
     }
 
-    $return_url = Url::fromRoute('storage_manager.member_dashboard', [], ['absolute' => TRUE])->toString();
-    $portal_url = $this->stripeHelper->createPortalUrl($customer_id, $return_url, 'invoices');
+    $return_url = Url::fromRoute('entity.user.canonical', ['user' => $uid], ['absolute' => TRUE])->toString();
+    // Pass NULL to use invoices-only configuration from settings if present.
+    $portal_url = $this->stripeHelper->createPortalUrl($customer_id, $return_url, NULL);
 
     return new RedirectResponse($portal_url);
   }
-
 }
