@@ -3,13 +3,133 @@
 namespace Drupal\storage_manager\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
+use Drupal\storage_manager\Service\StatisticsService;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Storage dashboard and history pages.
  */
-class DashboardController extends ControllerBase {
+class DashboardController extends ControllerBase implements ContainerInjectionInterface {
+
+  /**
+   * The statistics service.
+   *
+   * @var \Drupal\storage_manager\Service\StatisticsService
+   */
+  protected $statisticsService;
+
+  /**
+   * Constructs a new DashboardController object.
+   *
+   * @param \Drupal\storage_manager\Service\StatisticsService $statistics_service
+   *   The statistics service.
+   */
+  public function __construct(StatisticsService $statistics_service) {
+    $this->statisticsService = $statistics_service;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('storage_manager.statistics_service')
+    );
+  }
+
+  protected function buildStatistics(array $stats): array {
+    $build = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['storage-manager-statistics']],
+    ];
+
+    // Overall stats.
+    $build['overall'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Overall Statistics'),
+      '#open' => TRUE,
+    ];
+    $build['overall']['table'] = [
+      '#type' => 'table',
+      '#header' => [$this->t('Metric'), $this->t('Value')],
+      '#rows' => [
+        [$this->t('Total units'), $stats['overall']['total_units']],
+        [$this->t('Occupied units'), $stats['overall']['occupied_units']],
+        [$this->t('Vacant units'), $stats['overall']['vacant_units']],
+        [$this->t('Vacancy rate'), sprintf('%.2f%%', $stats['overall']['vacancy_rate'])],
+        [$this->t('Billed value (monthly)'), '$' . number_format($stats['overall']['billed_value'], 2)],
+        [$this->t('Complimentary value (monthly)'), '$' . number_format($stats['overall']['complimentary_value'], 2)],
+        [$this->t('Potential value from vacant units (monthly)'), '$' . number_format($stats['overall']['potential_value'], 2)],
+      ],
+    ];
+
+    // By type.
+    $build['by_type'] = [
+      '#type' => 'details',
+      '#title' => $this->t('By Type'),
+    ];
+    $type_rows = [];
+    foreach ($stats['by_type'] as $name => $data) {
+      $type_rows[] = [
+        $name,
+        $data['total_units'],
+        $data['occupied_units'],
+        sprintf('%.2f%%', $data['vacancy_rate']),
+        '$' . number_format($data['billed_value'], 2),
+        '$' . number_format($data['complimentary_value'], 2),
+        '$' . number_format($data['potential_value'], 2),
+        '$' . number_format($data['total_inventory_value'], 2),
+      ];
+    }
+    $build['by_type']['table'] = [
+      '#type' => 'table',
+      '#header' => [$this->t('Type'), $this->t('Total'), $this->t('Occupied'), $this->t('Vacancy Rate'), $this->t('Billed Value'), $this->t('Complimentary Value'), $this->t('Potential Value'), $this->t('Total Inventory Value')],
+      '#rows' => $type_rows,
+    ];
+
+    // By area.
+    $build['by_area'] = [
+      '#type' => 'details',
+      '#title' => $this->t('By Area'),
+    ];
+    $area_rows = [];
+    foreach ($stats['by_area'] as $name => $data) {
+      $area_rows[] = [
+        $name,
+        $data['total_units'],
+        $data['occupied_units'],
+        sprintf('%.2f%%', $data['vacancy_rate']),
+        '$' . number_format($data['billed_value'], 2),
+        '$' . number_format($data['complimentary_value'], 2),
+        '$' . number_format($data['potential_value'], 2),
+        '$' . number_format($data['total_inventory_value'], 2),
+      ];
+    }
+    $build['by_area']['table'] = [
+      '#type' => 'table',
+      '#header' => [$this->t('Area'), $this->t('Total'), $this->t('Occupied'), $this->t('Vacancy Rate'), $this->t('Billed Value'), $this->t('Complimentary Value'), $this->t('Potential Value'), $this->t('Total Inventory Value')],
+      '#rows' => $area_rows,
+    ];
+
+    // Violations.
+    $build['violations'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Violations'),
+    ];
+    $build['violations']['table'] = [
+      '#type' => 'table',
+      '#header' => [$this->t('Metric'), $this->t('Value')],
+      '#rows' => [
+        [$this->t('Active violations'), $stats['violations']['active_violations']],
+        [$this->t('Total accrued charges'), '$' . number_format($stats['violations']['total_accrued'], 2)],
+      ],
+    ];
+
+    return $build;
+  }
 
   /**
    * Dashboard listing.
@@ -191,6 +311,9 @@ class DashboardController extends ControllerBase {
       '#rows' => $rows,
       '#empty' => $this->t('No storage units found.'),
     ];
+
+    $stats = $this->statisticsService->getStatistics();
+    $build['statistics'] = $this->buildStatistics($stats);
 
     return $build;
   }
