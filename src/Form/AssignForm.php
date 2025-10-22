@@ -96,10 +96,13 @@ class AssignForm extends FormBase {
       $price_snapshot = $term->get('field_monthly_price')->value ?? NULL;
     }
 
+    $user_id = $form_state->getValue('user');
+    $user = \Drupal::entityTypeManager()->getStorage('user')->load($user_id);
+
     $assignment = $a_storage->create([
       'type' => 'storage_assignment',
       'field_storage_unit' => $unit->id(),
-      'field_storage_user' => $form_state->getValue('user'),
+      'field_storage_user' => $user_id,
       'field_storage_start_date' => $form_state->getValue('start_date'),
       'field_storage_assignment_status' => 'active',
       'field_storage_price_snapshot' => $price_snapshot,
@@ -114,6 +117,7 @@ class AssignForm extends FormBase {
     $this->notificationManager->sendEvent('assignment', [
       'assignment' => $assignment,
       'unit' => $unit,
+      'user' => $user,
     ]);
 
     // (Optional) Stripe create subscription later via SubscriptionManager.
