@@ -8,6 +8,16 @@ storage_manager.settings:
     release_confirmation_message:
       type: text
       label: 'Release confirmation statement'
+    stripe:
+      type: mapping
+      label: 'Stripe settings'
+      mapping:
+        enable_billing:
+          type: boolean
+          label: 'Enable Stripe billing'
+        default_price_id:
+          type: string
+          label: 'Default Stripe price ID'
     violation:
       type: mapping
       label: 'Violation defaults'
