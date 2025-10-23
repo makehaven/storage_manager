@@ -23,6 +23,10 @@ class StorageManagerSettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config = $this->config('storage_manager.settings');
 
+    if (!$this->isStripeEnabled()) {
+      $this->messenger()->addWarning($this->t('Stripe billing is disabled because the mh_stripe module is not installed.'));
+    }
+
     $form['self_service'] = [
       '#type' => 'details',
       '#title' => $this->t('Member self-service'),
@@ -77,6 +81,7 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       '#title' => $this->t('Stripe billing'),
       '#open' => TRUE,
       '#tree' => TRUE,
+      '#access' => $this->isStripeEnabled(),
     ];
 
     $form['stripe']['enable_billing'] = [
@@ -200,6 +205,16 @@ class StorageManagerSettingsForm extends ConfigFormBase {
     }
 
     return parent::buildForm($form, $form_state);
+  }
+
+  /**
+   * Checks if Stripe integration is available.
+   *
+   * @return bool
+   *   TRUE if the mh_stripe module is enabled.
+   */
+  protected function isStripeEnabled(): bool {
+    return $this->moduleHandler()->moduleExists('mh_stripe');
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state): void {

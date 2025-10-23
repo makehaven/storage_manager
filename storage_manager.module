@@ -69,6 +69,12 @@ function storage_manager_entity_type_alter(array &$entity_types) {
 function storage_manager_entity_operation(EntityInterface $entity) {
   $operations = [];
 
+  $config = \Drupal::config('storage_manager.settings');
+  $stripe_enabled = (bool) $config->get('stripe.enable_billing');
+  if (!$stripe_enabled) {
+    return [];
+  }
+
   if ($entity->getEntityTypeId() === 'storage_assignment' && \Drupal::currentUser()->hasPermission('manage storage billing')) {
     $operations['stripe_create_or_open'] = [
       'title' => t('Create/Open Stripe Subscription'),

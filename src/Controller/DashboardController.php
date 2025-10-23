@@ -538,6 +538,15 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       ],
     ];
 
+    $config = $this->config('storage_manager.settings');
+    $stripe_enabled = (bool) $config->get('stripe.enable_billing');
+    if ($stripe_enabled) {
+      $sections['member']['links'][] = [
+        'title' => $this->t('Stripe Billing Portal'),
+        'url' => Url::fromRoute('storage_manager_billing.portal'),
+      ];
+    }
+
     $build = [
       '#type' => 'container',
       '#attributes' => ['class' => ['storage-manager-hub']],
