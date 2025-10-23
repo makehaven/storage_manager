@@ -128,6 +128,14 @@ class MemberStorageController extends ControllerBase {
       ];
     }
 
+    $billing_links = [];
+    if ($this->storageCurrentUser->isAuthenticated()) {
+      $billing_links[] = [
+        'title' => $this->t('View Storage Invoices'),
+        'url' => Url::fromRoute('storage_manager_billing.portal'),
+      ];
+    }
+
     $admin_links = [];
     if ($this->storageCurrentUser->hasPermission('manage storage')) {
       $admin_links[] = [
@@ -157,7 +165,7 @@ class MemberStorageController extends ControllerBase {
       ];
     }
 
-    if (!$member_links && !$admin_links) {
+    if (!$member_links && !$admin_links && !$billing_links) {
       return NULL;
     }
 
@@ -179,6 +187,19 @@ class MemberStorageController extends ControllerBase {
         '#theme' => 'links',
         '#attributes' => ['class' => ['storage-manager-links', 'storage-manager-links--member']],
         '#links' => $member_links,
+      ];
+    }
+
+    if ($billing_links) {
+      $build['billing_heading'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'h2',
+        '#value' => $this->t('Billing'),
+      ];
+      $build['billing_links'] = [
+        '#theme' => 'links',
+        '#attributes' => ['class' => ['storage-manager-links', 'storage-manager-links--billing']],
+        '#links' => $billing_links,
       ];
     }
 

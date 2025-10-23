@@ -72,6 +72,32 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       '#allowed_formats' => ['basic_html', 'full_html'],
     ];
 
+    $form['stripe'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Stripe billing'),
+      '#open' => TRUE,
+      '#tree' => TRUE,
+    ];
+
+    $form['stripe']['enable_billing'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable Stripe billing'),
+      '#default_value' => $config->get('stripe.enable_billing'),
+      '#description' => $this->t('Enable integration with Stripe for recurring subscription billing.'),
+    ];
+
+    $form['stripe']['default_price_id'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Default Stripe price ID'),
+      '#default_value' => $config->get('stripe.default_price_id'),
+      '#description' => $this->t('Enter the default Stripe price ID (e.g., price_12345...). This can be overridden on individual storage assignments.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="stripe[enable_billing]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
     $form['violation'] = [
       '#type' => 'details',
       '#title' => $this->t('Violation defaults'),
@@ -185,6 +211,10 @@ class StorageManagerSettingsForm extends ConfigFormBase {
 
     $agreement = $form_state->getValue('claim_agreement');
     $config->set('claim_agreement', $agreement);
+
+    $stripe_settings = $form_state->getValue('stripe');
+    $config->set('stripe.enable_billing', $stripe_settings['enable_billing']);
+    $config->set('stripe.default_price_id', $stripe_settings['default_price_id']);
 
     $violation_settings = $form_state->getValue('violation');
     $default_daily = $violation_settings['default_daily_rate'];

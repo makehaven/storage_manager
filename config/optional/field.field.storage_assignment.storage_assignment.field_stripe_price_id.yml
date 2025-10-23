@@ -1,0 +1,19 @@
+uuid: 7b2e9b0e-9b5e-4e6a-9b1e-7b7e6b7e1b5f
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_stripe_price_id
+id: storage_assignment.storage_assignment.field_stripe_price_id
+field_name: field_stripe_price_id
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Stripe Price ID'
+description: 'The Stripe Price ID for this storage assignment.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

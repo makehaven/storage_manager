@@ -1,11 +1,11 @@
-uuid: 0d04364f-f6f6-4a95-b11f-9bdde76329a5
+uuid: 4f1265a7-0e9e-4a6a-9b1e-7b7e6b7e1b5f
 langcode: en
 status: true
 dependencies:
   module:
     - eck
-id: storage_assignment.field_storage_stripe_sub_id
-field_name: field_storage_stripe_sub_id
+id: storage_assignment.field_stripe_price_id
+field_name: field_stripe_price_id
 entity_type: storage_assignment
 type: string
 settings:

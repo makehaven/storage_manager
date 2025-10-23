@@ -18,6 +18,8 @@ dependencies:
     - field.field.storage_assignment.storage_assignment.field_violation_daily_rate
     - field.field.storage_assignment.storage_assignment.field_violation_total_due
     - field.field.storage_assignment.storage_assignment.field_storage_complimentary
+    - field.field.storage_assignment.storage_assignment.field_stripe_price_id
+    - field.field.storage_assignment.storage_assignment.field_storage_stripe_sub_id
   module:
     - datetime
     - field
@@ -137,6 +139,22 @@ content:
       format: default
       format_custom_false: ''
       format_custom_true: ''
+    third_party_settings: {  }
+  field_stripe_price_id:
+    label: above
+    type: string
+    weight: 13
+    region: content
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+  field_storage_stripe_sub_id:
+    label: above
+    type: string
+    weight: 14
+    region: content
+    settings:
+      link_to_entity: false
     third_party_settings: {  }
 hidden:
   created: true
