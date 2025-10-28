@@ -83,7 +83,7 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Enable Stripe billing'),
       '#default_value' => $config->get('stripe.enable_billing'),
-      '#description' => $this->t('Enable integration with Stripe for recurring subscription billing.'),
+      '#description' => $this->t('Enable integration with Stripe so storage assignments automatically create, update, and cancel the related subscription items.'),
     ];
 
     $form['stripe']['default_price_id'] = [

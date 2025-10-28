@@ -13,6 +13,7 @@ use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
 use Drupal\storage_manager\Service\NotificationManager;
 use Drupal\storage_manager\Service\ViolationManager;
+use Drupal\storage_manager\Service\StripeAssignmentManager;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Component\Datetime\TimeInterface;
@@ -22,17 +23,24 @@ use Drupal\Component\Datetime\TimeInterface;
  */
 class UserReleaseForm extends ContentEntityForm {
 
+  private StripeAssignmentManager $stripeAssignmentManager;
+
   public function __construct(
     EntityRepositoryInterface $entity_repository,
-    EntityTypeBundleInfoInterface $entity_type_bundle_info = NULL,
-    TimeInterface $time = NULL,
+    EntityTypeBundleInfoInterface $entity_type_bundle_info,
+    TimeInterface $time,
     private readonly EntityTypeManagerInterface $storageEntityTypeManager,
     private readonly NotificationManager $notificationManager,
     private readonly ViolationManager $violationManager,
     private readonly ConfigFactoryInterface $storageConfigFactory,
-    private readonly AccountProxyInterface $storageCurrentUser
+    private readonly AccountProxyInterface $storageCurrentUser,
+    ?StripeAssignmentManager $stripeAssignmentManager = NULL
   ) {
     parent::__construct($entity_repository, $entity_type_bundle_info, $time);
+    if (!$stripeAssignmentManager) {
+      throw new \InvalidArgumentException('StripeAssignmentManager service is required.');
+    }
+    $this->stripeAssignmentManager = $stripeAssignmentManager;
   }
 
   public static function create(ContainerInterface $container): static {
@@ -45,6 +53,7 @@ class UserReleaseForm extends ContentEntityForm {
       $container->get('storage_manager.violation_manager'),
       $container->get('config.factory'),
       $container->get('current_user'),
+      $container->get('storage_manager.stripe_assignment_manager'),
     );
   }
 
@@ -181,6 +190,19 @@ class UserReleaseForm extends ContentEntityForm {
       $this->notificationManager->sendEvent('violation_resolved', $context);
       if ($violation_total > 0) {
         $this->notificationManager->sendEvent('violation_fine', $context);
+      }
+    }
+
+    if ($this->stripeAssignmentManager->isEnabled()) {
+      try {
+        $this->stripeAssignmentManager->releaseAssignment($assignment);
+      }
+      catch (\Throwable $e) {
+        $this->logger('storage_manager')->error('Failed to release Stripe billing for storage assignment @id: @message', [
+          '@id' => $assignment->id(),
+          '@message' => $e->getMessage(),
+        ]);
+        $this->messenger()->addWarning($this->t('We could not automatically stop Stripe billing for this storage. Staff will review the subscription.'));
       }
     }
 

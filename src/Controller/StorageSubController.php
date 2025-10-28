@@ -6,6 +6,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Url;
 use Drupal\mh_stripe\Service\StripeHelper;
+use Drupal\storage_manager\Service\StripeAssignmentManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -13,10 +14,16 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class StorageSubController extends ControllerBase {
 
-  public function __construct(private StripeHelper $stripeHelper) {}
+  public function __construct(
+    private readonly StripeHelper $stripeHelper,
+    private readonly StripeAssignmentManager $stripeAssignmentManager,
+  ) {}
 
   public static function create(ContainerInterface $container): self {
-    return new self($container->get('mh_stripe.helper'));
+    return new self(
+      $container->get('mh_stripe.helper'),
+      $container->get('storage_manager.stripe_assignment_manager'),
+    );
   }
 
   /**
@@ -44,41 +51,35 @@ final class StorageSubController extends ControllerBase {
     }
 
     // Get Stripe customer id from the user.
-    $customer_id = (string) ($account->get('field_stripe_customer_id')->value ?? '');
-    if (!$customer_id) {
-      $this->messenger()->addError($this->t('No Stripe customer linked to this user. Open their profile and use "Open in Stripe" first.'));
+    $customer_field = $this->stripeHelper->customerFieldName();
+    $customer_id = (string) ($account->get($customer_field)->value ?? '');
+    if (!$customer_id && !$account->getEmail()) {
+      $this->messenger()->addError($this->t('This user does not have an email address. Add one before syncing the storage subscription with Stripe.'));
       return new RedirectResponse(Url::fromRoute('entity.user.canonical', ['user' => $account->id()])->toString());
     }
 
-    // If already linked, open subscription in Stripe.
-    $sub_field = 'field_storage_stripe_sub_id';
-    $existing_sub = (string) ($assignment->get($sub_field)->value ?? '');
-    if ($existing_sub) {
-      return new RedirectResponse($this->stripeHelper->subscriptionDashboardUrl($existing_sub));
-    }
-
-    // Require a price id on the assignment.
-    $price_id = (string) ($assignment->get('field_stripe_price_id')->value ?? '');
-    if (!$price_id) {
-      $this->messenger()->addError($this->t('No Stripe price configured on this assignment.'));
-      return $this->redirect('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()]);
-    }
-
-    // Create subscription and save sub id.
+    // Ensure the assignment is synchronized with Stripe.
     try {
-      $metadata = [
-        'drupal_assignment_id' => (string) $assignment->id(),
-        'storage_unit' => (string) ($assignment->get('field_unit_label')->value ?? ''),
-      ];
-      $sub = $this->stripeHelper->createSubscription($customer_id, $price_id, $metadata);
-      $assignment->set($sub_field, $sub['id'])->save();
-
-      $this->messenger()->addStatus($this->t('Stripe subscription created and linked.'));
-      return new RedirectResponse($this->stripeHelper->subscriptionDashboardUrl($sub['id']));
+      $this->stripeAssignmentManager->syncAssignment($assignment);
     }
     catch (\Throwable $e) {
-      $this->messenger()->addError($this->t('Error creating Stripe subscription: @msg', ['@msg' => $e->getMessage()]));
+      $this->messenger()->addError($this->t('Unable to synchronize this assignment with Stripe: @msg', ['@msg' => $e->getMessage()]));
       return $this->redirect('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()]);
     }
+
+    /** @var \Drupal\eck\EckEntityInterface|null $refreshed */
+    $refreshed = $this->entityTypeManager()->getStorage('storage_assignment')->load($assignment->id());
+    $assignment = $refreshed ?? $assignment;
+
+    // Open subscription in Stripe if available.
+    $sub_field = 'field_storage_stripe_sub_id';
+    $subscription_id = (string) ($assignment->get($sub_field)->value ?? '');
+    if (!$subscription_id) {
+      $this->messenger()->addError($this->t('Stripe billing is not linked to this assignment yet. Check the assignment’s price settings and try again.'));
+      return $this->redirect('entity.storage_assignment.edit_form', ['storage_assignment' => $assignment->id()]);
+    }
+
+    $this->messenger()->addStatus($this->t('Stripe subscription is ready. Opening dashboard in a new tab.'));
+    return new RedirectResponse($this->stripeHelper->subscriptionDashboardUrl($subscription_id));
   }
 }

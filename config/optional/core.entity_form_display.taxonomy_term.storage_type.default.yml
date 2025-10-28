@@ -1,0 +1,67 @@
+uuid: 077fbdaa-deef-4791-ab68-c78aaee549ee
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.taxonomy_term.storage_type.field_monthly_price
+    - field.field.taxonomy_term.storage_type.field_stripe_price_id
+    - taxonomy.vocabulary.storage_type
+  module:
+    - path
+    - text
+id: taxonomy_term.storage_type.default
+targetEntityType: taxonomy_term
+bundle: storage_type
+mode: default
+content:
+  name:
+    type: string_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  description:
+    type: text_textarea
+    weight: 1
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+  field_monthly_price:
+    type: number
+    weight: 2
+    region: content
+    settings:
+      placeholder: ''
+    third_party_settings: {  }
+  field_stripe_price_id:
+    type: string_textfield
+    weight: 3
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  simple_sitemap:
+    weight: 4
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  path:
+    type: path
+    weight: 5
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  status:
+    type: boolean_checkbox
+    weight: 6
+    region: content
+    settings:
+      display_label: true
+    third_party_settings: {  }
+hidden:
+  uuid: true

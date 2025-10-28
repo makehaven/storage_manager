@@ -8,6 +8,14 @@ services:
     arguments: ['@logger.channel.storage_manager']
     # Add Stripe client later if you enable Stripe.
 
+  storage_manager.stripe_assignment_manager:
+    class: Drupal\storage_manager\Service\StripeAssignmentManager
+    arguments:
+      - '@config.factory'
+      - '@entity_type.manager'
+      - '@mh_stripe.helper'
+      - '@logger.channel.storage_manager'
+
   storage_manager.assignment_guard:
     class: Drupal\storage_manager\Service\AssignmentGuard
     arguments: ['@entity_type.manager', '@logger.channel.storage_manager']

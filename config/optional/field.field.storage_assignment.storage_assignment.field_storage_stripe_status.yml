@@ -1,0 +1,19 @@
+uuid: 1c8a6df9-1d08-4b66-9237-c9ad4d2e79cb
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_storage_stripe_status
+id: storage_assignment.storage_assignment.field_storage_stripe_status
+field_name: field_storage_stripe_status
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Stripe Subscription Status'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

@@ -101,9 +101,25 @@ content:
       size: 60
       placeholder: ''
     third_party_settings: {  }
+  field_storage_stripe_item_id:
+    type: string_textfield
+    weight: 20
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
   field_storage_stripe_sub_id:
     type: string_textfield
     weight: 21
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_storage_stripe_status:
+    type: string_textfield
+    weight: 22
     region: content
     settings:
       size: 60

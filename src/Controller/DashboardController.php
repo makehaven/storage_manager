@@ -7,6 +7,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
+use Drupal\mh_stripe\Service\StripeHelper;
 use Drupal\storage_manager\Service\StatisticsService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -22,6 +23,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
    */
   protected $statisticsService;
   protected ConfigFactoryInterface $storageConfigFactory;
+  protected StripeHelper $stripeHelper;
 
   /**
    * Constructs a new DashboardController object.
@@ -29,9 +31,10 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
    * @param \Drupal\storage_manager\Service\StatisticsService $statistics_service
    *   The statistics service.
    */
-  public function __construct(StatisticsService $statistics_service, ConfigFactoryInterface $configFactory) {
+  public function __construct(StatisticsService $statistics_service, ConfigFactoryInterface $configFactory, StripeHelper $stripeHelper) {
     $this->statisticsService = $statistics_service;
     $this->storageConfigFactory = $configFactory;
+    $this->stripeHelper = $stripeHelper;
   }
 
   /**
@@ -40,7 +43,8 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('storage_manager.statistics_service'),
-      $container->get('config.factory')
+      $container->get('config.factory'),
+      $container->get('mh_stripe.helper'),
     );
   }
 
@@ -147,12 +151,13 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
     $build['#attached']['library'][] = 'storage_manager/admin';
     $build['hub_links'] = $this->buildHubLinks();
 
-    if ($this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing')) {
+    $stripeEnabled = (bool) $this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing');
+    if ($stripeEnabled) {
       $build['stripe_notice'] = [
         '#type' => 'container',
         '#attributes' => ['class' => ['messages', 'messages--info']],
         'content' => [
-          '#markup' => $this->t('Stripe billing is enabled. Storage claims do not create subscriptions automatically. After assigning or approving a member claim, open the assignment’s operations menu and choose <em>Create/Open Stripe Subscription</em> to create or update their billing.'),
+          '#markup' => $this->t('Stripe billing is enabled. Storage assignments sync to Stripe automatically; use the assignment operations to open the linked customer or subscription when follow-up is needed.'),
         ],
       ];
     }
@@ -168,6 +173,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
 
     $violation_manager = \Drupal::service('storage_manager.violation_manager');
     $rows = [];
+    $customerFieldName = $this->stripeHelper->customerFieldName();
 
     foreach ($units as $unit) {
       $unit_id = $unit->get('field_storage_unit_id')->value ?: $this->t('—');
@@ -190,6 +196,9 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       }
       $assignment_id = $assignment_query->range(0, 1)->execute();
       $assignment = $assignment_id ? $assignment_storage->load(reset($assignment_id)) : NULL;
+      $billing_status = $this->t('—');
+      $customer_id = NULL;
+      $subscription_id = '';
 
       if ($assignment) {
         $member_entity = $assignment->get('field_storage_user')->entity;
@@ -202,6 +211,42 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
 
         if ($assignment->hasField('field_storage_complimentary') && (bool) $assignment->get('field_storage_complimentary')->value) {
           $monthly_cost = $this->t('Complimentary');
+        }
+
+        $subscription_id = $assignment->hasField('field_storage_stripe_sub_id')
+          ? (string) ($assignment->get('field_storage_stripe_sub_id')->value ?? '')
+          : '';
+        $subscription_status = $assignment->hasField('field_storage_stripe_status')
+          ? (string) ($assignment->get('field_storage_stripe_status')->value ?? '')
+          : '';
+        $status_label = $subscription_status !== ''
+          ? ucfirst(str_replace('_', ' ', $subscription_status))
+          : $this->t('Not linked');
+        $customer_id = $member_entity?->get($customerFieldName)->value ?? '';
+
+        if ($stripeEnabled) {
+          if ($subscription_id) {
+            $billing_status = Link::fromTextAndUrl(
+              $status_label,
+              Url::fromUri($this->stripeHelper->subscriptionDashboardUrl($subscription_id), [
+                'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+              ])
+            )->toString();
+          }
+          elseif ($customer_id) {
+            $billing_status = Link::fromTextAndUrl(
+              $this->t('Customer'),
+              Url::fromUri($this->stripeHelper->customerDashboardUrl((string) $customer_id), [
+                'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+              ])
+            )->toString();
+          }
+          else {
+            $billing_status = $status_label;
+          }
+        }
+        else {
+          $billing_status = $this->t('—');
         }
 
         $active_violation = $violation_manager->loadActiveViolation((int) $assignment->id());
@@ -275,6 +320,27 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         'url' => Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()]),
       ];
 
+      if ($assignment && $stripeEnabled) {
+        if (!empty($customer_id)) {
+          $ops['stripe_customer'] = [
+            'title' => $this->t('Open Stripe Customer'),
+            'url' => Url::fromUri($this->stripeHelper->customerDashboardUrl((string) $customer_id), [
+              'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+            ]),
+            'weight' => 55,
+          ];
+        }
+        if (!empty($subscription_id)) {
+          $ops['stripe_subscription'] = [
+            'title' => $this->t('Open Stripe Subscription'),
+            'url' => Url::fromUri($this->stripeHelper->subscriptionDashboardUrl($subscription_id), [
+              'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+            ]),
+            'weight' => 56,
+          ];
+        }
+      }
+
       $operations_render = [
         '#type' => 'dropbutton',
         '#links' => $ops,
@@ -292,7 +358,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         ],
       ];
 
-      $rows[] = [
+      $row = [
         $unit_id,
         $area,
         $type,
@@ -302,6 +368,10 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         $member,
         ['data' => $operations_render],
       ];
+      if ($stripeEnabled) {
+        array_splice($row, 4, 0, [$billing_status]);
+      }
+      $rows[] = $row;
     }
 
     $header = [
@@ -309,11 +379,16 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       $this->buildSortableHeader('area', $this->t('Area'), $current_sort),
       $this->buildSortableHeader('type', $this->t('Type'), $current_sort),
       $this->buildSortableHeader('cost', $this->t('Monthly Cost'), $current_sort),
+    ];
+    if ($stripeEnabled) {
+      $header[] = $this->buildSortableHeader('billing', $this->t('Billing'), $current_sort);
+    }
+    $header = array_merge($header, [
       $this->buildSortableHeader('status', $this->t('Status'), $current_sort),
       $this->buildSortableHeader('violation', $this->t('Violation'), $current_sort),
       $this->buildSortableHeader('member', $this->t('Member'), $current_sort),
       $this->t('Operations'),
-    ];
+    ]);
 
     if ($current_sort['field']) {
       $rows = $this->sortRows($rows, $current_sort['field'], $current_sort['direction']);
@@ -482,6 +557,12 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       'violation' => 5,
       'member' => 6,
     ];
+    if ($this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing')) {
+      $index_map['billing'] = 4;
+      $index_map['status'] = 5;
+      $index_map['violation'] = 6;
+      $index_map['member'] = 7;
+    }
     if (!isset($index_map[$field])) {
       return $rows;
     }

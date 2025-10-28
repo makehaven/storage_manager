@@ -156,6 +156,22 @@ content:
     settings:
       link_to_entity: false
     third_party_settings: {  }
+  field_storage_stripe_item_id:
+    label: above
+    type: string
+    weight: 15
+    region: content
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+  field_storage_stripe_status:
+    label: above
+    type: string
+    weight: 16
+    region: content
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
 hidden:
   created: true
   changed: true

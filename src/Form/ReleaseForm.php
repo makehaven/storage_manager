@@ -3,11 +3,32 @@
 namespace Drupal\storage_manager\Form;
 
 use Drupal\Core\Datetime\DrupalDateTime;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\storage_manager\Service\NotificationManager;
+use Drupal\storage_manager\Service\StripeAssignmentManager;
+use Drupal\storage_manager\Service\ViolationManager;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ReleaseForm extends FormBase {
+
+  public function __construct(
+    private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly NotificationManager $notificationManager,
+    private readonly ViolationManager $violationManager,
+    private readonly StripeAssignmentManager $stripeAssignmentManager,
+  ) {}
+
+  public static function create(ContainerInterface $container): static {
+    return new static(
+      $container->get('entity_type.manager'),
+      $container->get('storage_manager.notification_manager'),
+      $container->get('storage_manager.violation_manager'),
+      $container->get('storage_manager.stripe_assignment_manager'),
+    );
+  }
 
   public function getFormId(): string {
     return 'storage_manager_release_form';
@@ -53,8 +74,7 @@ class ReleaseForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $unit_id = $form_state->getValue('unit_id');
 
-    $a_storage = \Drupal::entityTypeManager()->getStorage('storage_assignment');
-    $violation_manager = \Drupal::service('storage_manager.violation_manager');
+    $a_storage = $this->entityTypeManager->getStorage('storage_assignment');
     $ids = $a_storage->getQuery()
       ->condition('field_storage_unit', $unit_id)
       ->condition('field_storage_assignment_status', 'active')
@@ -67,7 +87,7 @@ class ReleaseForm extends FormBase {
       $assignment->set('field_storage_end_date', $form_state->getValue('end_date'));
 
       $violation_total = NULL;
-      $active_violation = $violation_manager->loadActiveViolation((int) $assignment->id());
+      $active_violation = $this->violationManager->loadActiveViolation((int) $assignment->id());
       if ($active_violation) {
         $resolved_value = $form_state->getValue('end_date');
         $resolved_dt = NULL;
@@ -75,17 +95,16 @@ class ReleaseForm extends FormBase {
           $resolved_date = new DrupalDateTime($resolved_value . ' 23:59:59');
           $resolved_dt = $resolved_date->getPhpDateTime();
         }
-        $violation_total = $violation_manager->finalizeViolation($active_violation, $resolved_dt);
+        $violation_total = $this->violationManager->finalizeViolation($active_violation, $resolved_dt);
       }
 
       $assignment->save();
 
-      $notification = \Drupal::service('storage_manager.notification_manager');
       $context = [
         'assignment' => $assignment,
         'release_date' => $form_state->getValue('end_date'),
       ];
-      $notification->sendEvent('release', $context);
+      $this->notificationManager->sendEvent('release', $context);
 
       if ($violation_total !== NULL) {
         if ($active_violation) {
@@ -93,16 +112,27 @@ class ReleaseForm extends FormBase {
           $context['violation_resolved'] = $active_violation->get('field_storage_vi_resolved')->value;
         }
         $context['violation_total'] = $violation_total;
-        $notification->sendEvent('violation_resolved', $context);
+        $this->notificationManager->sendEvent('violation_resolved', $context);
         if ($violation_total > 0) {
-          $notification->sendEvent('violation_fine', $context);
+          $this->notificationManager->sendEvent('violation_fine', $context);
         }
       }
 
-      // (Optional) Stripe cancel if enabled.
+      if ($this->stripeAssignmentManager->isEnabled()) {
+        try {
+          $this->stripeAssignmentManager->releaseAssignment($assignment);
+        }
+        catch (\Throwable $e) {
+          $this->logger('storage_manager')->error('Failed to release Stripe billing for storage assignment @id: @message', [
+            '@id' => $assignment->id(),
+            '@message' => $e->getMessage(),
+          ]);
+          $this->messenger()->addWarning($this->t('Storage billing was not fully released in Stripe. Please review the subscription manually.'));
+        }
+      }
     }
 
-    $u_storage = \Drupal::entityTypeManager()->getStorage('storage_unit');
+    $u_storage = $this->entityTypeManager->getStorage('storage_unit');
     if ($unit = $u_storage->load($unit_id)) {
       $unit->set('field_storage_status', 'vacant');
       $unit->save();

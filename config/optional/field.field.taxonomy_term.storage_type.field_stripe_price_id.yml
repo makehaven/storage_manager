@@ -1,0 +1,19 @@
+uuid: 0024b884-4cd9-4c1d-9b56-9b7914347fa0
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.taxonomy_term.field_stripe_price_id
+    - taxonomy.vocabulary.storage_type
+id: taxonomy_term.storage_type.field_stripe_price_id
+field_name: field_stripe_price_id
+entity_type: taxonomy_term
+bundle: storage_type
+label: 'Stripe Price ID'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

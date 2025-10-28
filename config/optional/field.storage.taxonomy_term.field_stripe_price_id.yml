@@ -1,0 +1,23 @@
+uuid: 4d7d7e2e-26ec-4d73-af0a-2d46b3e5d8ac
+langcode: en
+status: true
+dependencies:
+  config:
+    - taxonomy.vocabulary.storage_type
+  module:
+    - taxonomy
+id: taxonomy_term.field_stripe_price_id
+field_name: field_stripe_price_id
+entity_type: taxonomy_term
+type: string
+settings:
+  max_length: 255
+  is_ascii: false
+  case_sensitive: false
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false
