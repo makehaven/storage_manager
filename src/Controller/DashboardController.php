@@ -2,6 +2,7 @@
 
 namespace Drupal\storage_manager\Controller;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Link;
@@ -20,6 +21,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
    * @var \Drupal\storage_manager\Service\StatisticsService
    */
   protected $statisticsService;
+  protected ConfigFactoryInterface $storageConfigFactory;
 
   /**
    * Constructs a new DashboardController object.
@@ -27,8 +29,9 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
    * @param \Drupal\storage_manager\Service\StatisticsService $statistics_service
    *   The statistics service.
    */
-  public function __construct(StatisticsService $statistics_service) {
+  public function __construct(StatisticsService $statistics_service, ConfigFactoryInterface $configFactory) {
     $this->statisticsService = $statistics_service;
+    $this->storageConfigFactory = $configFactory;
   }
 
   /**
@@ -36,7 +39,8 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('storage_manager.statistics_service')
+      $container->get('storage_manager.statistics_service'),
+      $container->get('config.factory')
     );
   }
 
@@ -142,6 +146,16 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
     $build = [];
     $build['#attached']['library'][] = 'storage_manager/admin';
     $build['hub_links'] = $this->buildHubLinks();
+
+    if ($this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing')) {
+      $build['stripe_notice'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['messages', 'messages--info']],
+        'content' => [
+          '#markup' => $this->t('Stripe billing is enabled. Storage claims do not create subscriptions automatically. After assigning or approving a member claim, open the assignment’s operations menu and choose <em>Create/Open Stripe Subscription</em> to create or update their billing.'),
+        ],
+      ];
+    }
 
     $unit_storage = $this->entityTypeManager()->getStorage('storage_unit');
     $unit_ids = $unit_storage->getQuery()->accessCheck(TRUE)->execute();

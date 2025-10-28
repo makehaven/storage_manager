@@ -7,6 +7,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\storage_manager\Service\AssignmentGuard;
 use Drupal\storage_manager\Service\NotificationManager;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
 use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
@@ -43,10 +45,27 @@ class ClaimStorageForm extends FormBase {
 
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $units = $this->loadClaimableUnits();
+    $config = $this->storageConfigFactory->get('storage_manager.settings');
+    $stripe_enabled = (bool) $config->get('stripe.enable_billing');
 
     $form['intro'] = [
       '#markup' => '<p>' . $this->t('Choose an available storage unit to claim. The unit will be assigned to your account immediately.') . '</p>',
     ];
+
+    if ($stripe_enabled) {
+      $portal_link = Link::fromTextAndUrl(
+        $this->t('storage billing portal'),
+        Url::fromRoute('storage_manager_billing.portal')
+      )->toString();
+
+      $form['stripe_notice'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['messages', 'messages--info']],
+        'text' => [
+          '#markup' => $this->t('Stripe billing is enabled for storage. After you submit this form, staff will create or update your Stripe subscription. You will receive a receipt once charges begin, and you can review invoices any time on the !portal.', ['!portal' => $portal_link]),
+        ],
+      ];
+    }
 
     if (!$units) {
       $form['no_units'] = [
@@ -180,6 +199,9 @@ class ClaimStorageForm extends FormBase {
     ]);
 
     $this->messenger()->addStatus($this->t('You have claimed storage unit @unit.', ['@unit' => $unit->get('field_storage_unit_id')->value ?: $unit->id()]));
+    if ($this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing')) {
+      $this->messenger()->addStatus($this->t('Staff have been notified to create or update your Stripe subscription for this storage. No new charges occur until that setup is complete.'));
+    }
     $this->cacheTagsInvalidator->invalidateTags(['storage_assignment_list']);
     $form_state->setRedirect('storage_manager.member_dashboard');
   }

@@ -2,6 +2,7 @@
 
 namespace Drupal\storage_manager\Form;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
@@ -11,12 +12,17 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class AssignForm extends FormBase {
 
-  public function __construct(private AssignmentGuard $guard, private NotificationManager $notificationManager) {}
+  public function __construct(
+    private AssignmentGuard $guard,
+    private NotificationManager $notificationManager,
+    protected $configFactory
+  ) {}
 
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('storage_manager.assignment_guard'),
       $container->get('storage_manager.notification_manager'),
+      $container->get('config.factory'),
     );
   }
 
@@ -65,6 +71,16 @@ class AssignForm extends FormBase {
       '#default_value' => 0,
       '#access' => FALSE,
     ];
+
+    if ($this->configFactory->get('storage_manager.settings')->get('stripe.enable_billing')) {
+      $form['stripe_help'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['messages', 'messages--info']],
+        'text' => [
+          '#markup' => $this->t('Stripe billing is enabled. After this assignment is saved, open the storage dashboard and choose <em>Create/Open Stripe Subscription</em> from the assignment operations to start billing.'),
+        ],
+      ];
+    }
 
     $form['actions']['submit'] = [
       '#type' => 'submit',
@@ -123,6 +139,9 @@ class AssignForm extends FormBase {
     // (Optional) Stripe create subscription later via SubscriptionManager.
 
     $this->messenger()->addStatus($this->t('Assigned unit to user.'));
+    if ($this->configFactory->get('storage_manager.settings')->get('stripe.enable_billing')) {
+      $this->messenger()->addStatus($this->t('Next step: use <em>Create/Open Stripe Subscription</em> in the assignment operations to set up billing in Stripe.'));
+    }
 
     $form_state->setRedirectUrl(Url::fromRoute('storage_manager.dashboard'));
   }
