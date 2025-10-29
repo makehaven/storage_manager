@@ -12,4 +12,6 @@ dependencies:
   - drupal:system
   - drupal:datetime
   - drupal:options
+
+recommends:
   - mh_stripe:mh_stripe

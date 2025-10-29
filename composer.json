@@ -2,5 +2,10 @@
     "name": "makehaven/storage_manager",
     "type": "drupal-custom-module",
     "description": "Storage Manager for storage in makerspace",
-    "license": "GPL-2.0-or-later"
+    "license": "GPL-2.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "Drupal\\storage_manager\\": "src/"
+        }
+    }
 }

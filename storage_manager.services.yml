@@ -1,4 +1,13 @@
 services:
+  storage_manager.service_provider:
+    class: Drupal\storage_manager\StorageManagerServiceProvider
+    tags:
+      - { name: service_provider }
+  storage_manager.route_subscriber:
+    class: Drupal\storage_manager\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
+
   logger.channel.storage_manager:
     parent: logger.channel_base
     arguments: ['storage_manager']
