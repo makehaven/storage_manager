@@ -22,8 +22,16 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
    * @var \Drupal\storage_manager\Service\StatisticsService
    */
   protected $statisticsService;
+
+  /**
+   * Config factory for storage manager settings.
+   */
   protected ConfigFactoryInterface $storageConfigFactory;
-  protected StripeHelper $stripeHelper;
+
+  /**
+   * Stripe helper service when mh_stripe is enabled.
+   */
+  protected ?StripeHelper $stripeHelper;
 
   /**
    * Constructs a new DashboardController object.
@@ -31,7 +39,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
    * @param \Drupal\storage_manager\Service\StatisticsService $statistics_service
    *   The statistics service.
    */
-  public function __construct(StatisticsService $statistics_service, ConfigFactoryInterface $configFactory, StripeHelper $stripeHelper) {
+  public function __construct(StatisticsService $statistics_service, ConfigFactoryInterface $configFactory, ?StripeHelper $stripeHelper = NULL) {
     $this->statisticsService = $statistics_service;
     $this->storageConfigFactory = $configFactory;
     $this->stripeHelper = $stripeHelper;
@@ -41,10 +49,15 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
+    $stripeHelper = NULL;
+    if ($container->has('mh_stripe.helper')) {
+      $stripeHelper = $container->get('mh_stripe.helper');
+    }
+
     return new static(
       $container->get('storage_manager.statistics_service'),
       $container->get('config.factory'),
-      $container->get('mh_stripe.helper'),
+      $stripeHelper,
     );
   }
 
@@ -151,7 +164,8 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
     $build['#attached']['library'][] = 'storage_manager/admin';
     $build['hub_links'] = $this->buildHubLinks();
 
-    $stripeEnabled = (bool) $this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing');
+    $stripeEnabled = $this->stripeHelper !== NULL
+      && (bool) $this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing');
     if ($stripeEnabled) {
       $build['stripe_notice'] = [
         '#type' => 'container',
@@ -173,7 +187,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
 
     $violation_manager = \Drupal::service('storage_manager.violation_manager');
     $rows = [];
-    $customerFieldName = $this->stripeHelper->customerFieldName();
+    $customerFieldName = $this->stripeHelper?->customerFieldName() ?? 'field_stripe_customer_id';
 
     foreach ($units as $unit) {
       $unit_id = $unit->get('field_storage_unit_id')->value ?: $this->t('—');
