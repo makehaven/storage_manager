@@ -4,13 +4,51 @@ namespace Drupal\storage_manager\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\ConfigFormBase;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Form\ConfigFormBase;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+
 
 /**
  * Configuration form for Storage Manager settings.
  */
 class StorageManagerSettingsForm extends ConfigFormBase {
+
+  /**
+   * The module handler service.
+   *
+   * @var \Drupal\Core\Extension\ModuleHandlerInterface
+   */
+  protected $moduleHandler;
+
+  /**
+   * Constructs a new StorageManagerSettingsForm object.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The factory for configuration objects.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
+   *   The module handler service.
+   */
+  public function __construct(ConfigFactoryInterface $config_factory, ModuleHandlerInterface $module_handler) {
+    parent::__construct($config_factory);
+    $this->moduleHandler = $module_handler;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('config.factory'),
+      $container->get('module_handler')
+    );
+  }
 
   public function getFormId(): string {
     return 'storage_manager_settings_form';
@@ -214,7 +252,7 @@ class StorageManagerSettingsForm extends ConfigFormBase {
    *   TRUE if the mh_stripe module is enabled.
    */
   protected function isStripeEnabled(): bool {
-    return $this->moduleHandler()->moduleExists('mh_stripe');
+    return $this->moduleHandler->moduleExists('mh_stripe');
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state): void {
