@@ -211,7 +211,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       $assignment_id = $assignment_query->range(0, 1)->execute();
       $assignment = $assignment_id ? $assignment_storage->load(reset($assignment_id)) : NULL;
       $billing_status = $this->t('—');
-      $customer_id = NULL;
+      $customer_id = '';
       $subscription_id = '';
 
       if ($assignment) {
@@ -236,9 +236,12 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         $status_label = $subscription_status !== ''
           ? ucfirst(str_replace('_', ' ', $subscription_status))
           : $this->t('Not linked');
-        $customer_id = $member_entity?->get($customerFieldName)->value ?? '';
 
         if ($stripeEnabled) {
+          if ($member_entity?->hasField($customerFieldName)) {
+            $customer_id = $member_entity->get($customerFieldName)->value ?? '';
+          }
+
           if ($subscription_id) {
             $billing_status = Link::fromTextAndUrl(
               $status_label,

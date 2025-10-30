@@ -129,7 +129,8 @@ class MemberStorageController extends ControllerBase {
     }
 
     $billing_links = [];
-    if ($this->storageCurrentUser->isAuthenticated()) {
+    $module_handler = \Drupal::moduleHandler();
+    if ($this->storageCurrentUser->isAuthenticated() && $module_handler->moduleExists('mh_stripe')) {
       $billing_links[] = [
         'title' => $this->t('View Storage Invoices'),
         'url' => Url::fromRoute('storage_manager_billing.portal'),
