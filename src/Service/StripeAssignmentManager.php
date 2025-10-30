@@ -21,7 +21,7 @@ final class StripeAssignmentManager {
   public function __construct(
     private readonly ConfigFactoryInterface $configFactory,
     private readonly EntityTypeManagerInterface $entityTypeManager,
-    private readonly StripeHelper $stripeHelper,
+    private readonly ?StripeHelper $stripeHelper,
     private readonly LoggerInterface $logger,
   ) {}
 
@@ -29,6 +29,9 @@ final class StripeAssignmentManager {
    * Returns TRUE when Stripe billing is enabled for storage manager.
    */
   public function isEnabled(): bool {
+    if ($this->stripeHelper === NULL) {
+      return FALSE;
+    }
     return (bool) $this->configFactory->get('storage_manager.settings')->get('stripe.enable_billing');
   }
 
@@ -274,6 +277,10 @@ final class StripeAssignmentManager {
    * Ensure the user has a Stripe customer record and return the ID.
    */
   protected function ensureCustomerId(UserInterface $user): string {
+    if ($this->stripeHelper === NULL) {
+      return '';
+    }
+
     $field = $this->stripeHelper->customerFieldName();
     $customerId = trim((string) ($user->get($field)->value ?? ''));
     if ($customerId !== '') {

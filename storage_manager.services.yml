@@ -22,7 +22,7 @@ services:
     arguments:
       - '@config.factory'
       - '@entity_type.manager'
-      - '@mh_stripe.helper'
+      - '@?mh_stripe.helper'
       - '@logger.channel.storage_manager'
 
   storage_manager.assignment_guard:
