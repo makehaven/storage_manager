@@ -309,13 +309,19 @@ function storage_manager_update_10001() {
   $sa_storage = $entity_type_manager->getStorage('storage_assignment');
   $sa_ids = $sa_storage->getQuery()->accessCheck(FALSE)->execute();
   foreach ($sa_storage->loadMultiple($sa_ids) as $sa) {
-    $sa->setTitle('Assignment #' . $sa->id())->save();
+    if ($sa->hasField('title')) {
+      $sa->set('title', 'Assignment #' . $sa->id());
+      $sa->save();
+    }
   }
 
   $sv_storage = $entity_type_manager->getStorage('storage_violation');
   $sv_ids = $sv_storage->getQuery()->accessCheck(FALSE)->execute();
   foreach ($sv_storage->loadMultiple($sv_ids) as $sv) {
-    $sv->setTitle('Violation #' . $sv->id())->save();
+    if ($sv->hasField('title')) {
+      $sv->set('title', 'Violation #' . $sv->id());
+      $sv->save();
+    }
   }
 
   return t('Enabled titles for storage manager ECK entities.');

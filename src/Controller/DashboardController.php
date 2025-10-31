@@ -171,7 +171,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         '#type' => 'container',
         '#attributes' => ['class' => ['messages', 'messages--info']],
         'content' => [
-          '#markup' => $this->t('Stripe billing is enabled. Storage assignments sync to Stripe automatically; use the assignment operations to open the linked customer or subscription when follow-up is needed.'),
+          '#markup' => $this->t('Stripe billing is enabled. Storage assignments sync to Stripe automatically; use the assignment operations to open the linked customer or subscription when follow-up is needed. Billing status legend: "Active" links to the current Stripe subscription, "Customer" links to the member\'s Stripe customer when no storage subscription exists yet, and "Not linked" means the assignment has not been synchronized to Stripe.'),
         ],
       ];
     }
@@ -233,9 +233,15 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         $subscription_status = $assignment->hasField('field_storage_stripe_status')
           ? (string) ($assignment->get('field_storage_stripe_status')->value ?? '')
           : '';
-        $status_label = $subscription_status !== ''
-          ? ucfirst(str_replace('_', ' ', $subscription_status))
-          : $this->t('Not linked');
+        if ($subscription_status !== '') {
+          $status_label = ucfirst(str_replace('_', ' ', $subscription_status));
+        }
+        elseif ($subscription_id !== '') {
+          $status_label = $this->t('Active');
+        }
+        else {
+          $status_label = $this->t('Not linked');
+        }
 
         if ($stripeEnabled) {
           if ($member_entity?->hasField($customerFieldName)) {

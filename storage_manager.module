@@ -44,11 +44,17 @@ function storage_manager_entity_insert(EntityInterface $entity) {
       break;
 
     case 'storage_assignment':
-      $entity->setTitle('Assignment #' . $entity->id())->save();
+      if ($entity->hasField('title')) {
+        $entity->set('title', 'Assignment #' . $entity->id());
+        $entity->save();
+      }
       break;
 
     case 'storage_violation':
-      $entity->setTitle('Violation #' . $entity->id())->save();
+      if ($entity->hasField('title')) {
+        $entity->set('title', 'Violation #' . $entity->id());
+        $entity->save();
+      }
       break;
   }
 }
@@ -108,14 +114,14 @@ function storage_manager_entity_operation(EntityInterface $entity) {
 function storage_manager_eck_entity_presave(EntityInterface $entity) {
   switch ($entity->getEntityTypeId()) {
     case 'storage_assignment':
-      if (!$entity->isNew()) {
-        $entity->setTitle('Assignment #' . $entity->id());
+      if (!$entity->isNew() && $entity->hasField('title')) {
+        $entity->set('title', 'Assignment #' . $entity->id());
       }
       break;
 
     case 'storage_violation':
-      if (!$entity->isNew()) {
-        $entity->setTitle('Violation #' . $entity->id());
+      if (!$entity->isNew() && $entity->hasField('title')) {
+        $entity->set('title', 'Violation #' . $entity->id());
       }
       break;
   }
