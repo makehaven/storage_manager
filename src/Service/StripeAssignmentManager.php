@@ -59,7 +59,21 @@ final class StripeAssignmentManager {
       return;
     }
 
-    $priceId = $this->resolvePriceId($assignment);
+    $needsSave = FALSE;
+
+    $priceId = $assignment->hasField('field_stripe_price_id')
+      ? trim((string) ($assignment->get('field_stripe_price_id')->value ?? ''))
+      : '';
+    if ($priceId === '') {
+      $resolvedPriceId = $this->resolvePriceId($assignment);
+      if ($resolvedPriceId !== '') {
+        if ($this->setFieldValue($assignment, 'field_stripe_price_id', $resolvedPriceId)) {
+          $needsSave = TRUE;
+        }
+        $priceId = $resolvedPriceId;
+      }
+    }
+
     if ($priceId === '') {
       $this->logger->warning('Storage assignment @id does not have a Stripe price configured; skipping billing setup.', ['@id' => $assignment->id()]);
       throw new \RuntimeException('A Stripe price must be configured before Stripe billing can be synchronized.');
@@ -86,8 +100,8 @@ final class StripeAssignmentManager {
       $existing = $this->findExistingSubscriptionId($assignment);
       if ($existing !== NULL) {
         $subscriptionId = $existing;
-        if ($assignment->hasField('field_storage_stripe_sub_id')) {
-          $assignment->set('field_storage_stripe_sub_id', $subscriptionId);
+        if ($this->setFieldValue($assignment, 'field_storage_stripe_sub_id', $subscriptionId)) {
+          $needsSave = TRUE;
         }
       }
     }
@@ -110,14 +124,14 @@ final class StripeAssignmentManager {
           ],
           'expand' => ['items.data'],
         ]);
-        if ($assignment->hasField('field_storage_stripe_sub_id')) {
-          $assignment->set('field_storage_stripe_sub_id', $subscription->id);
+        if ($this->setFieldValue($assignment, 'field_storage_stripe_sub_id', $subscription->id)) {
+          $needsSave = TRUE;
         }
-        if ($assignment->hasField('field_storage_stripe_item_id')) {
-          $assignment->set('field_storage_stripe_item_id', $subscription->items->data[0]->id ?? '');
+        if ($this->setFieldValue($assignment, 'field_storage_stripe_item_id', $subscription->items->data[0]->id ?? '')) {
+          $needsSave = TRUE;
         }
-        if ($assignment->hasField('field_storage_stripe_status')) {
-          $assignment->set('field_storage_stripe_status', $subscription->status ?? '');
+        if ($this->setFieldValue($assignment, 'field_storage_stripe_status', $subscription->status ?? '')) {
+          $needsSave = TRUE;
         }
       }
       else {
@@ -139,15 +153,19 @@ final class StripeAssignmentManager {
         }
 
         if ($assignment->hasField('field_storage_stripe_item_id')) {
-          $assignment->set('field_storage_stripe_item_id', $item->id ?? '');
+          if ($this->setFieldValue($assignment, 'field_storage_stripe_item_id', $item->id ?? '')) {
+            $needsSave = TRUE;
+          }
         }
         $refreshed = $client->subscriptions->retrieve($subscriptionId);
         if ($assignment->hasField('field_storage_stripe_status')) {
-          $assignment->set('field_storage_stripe_status', $refreshed->status ?? '');
+          if ($this->setFieldValue($assignment, 'field_storage_stripe_status', $refreshed->status ?? '')) {
+            $needsSave = TRUE;
+          }
         }
       }
 
-      if ($assignment->isDirty()) {
+      if ($needsSave) {
         $assignment->save();
       }
     }
@@ -186,6 +204,8 @@ final class StripeAssignmentManager {
       ? trim((string) ($assignment->get('field_storage_stripe_item_id')->value ?? ''))
       : '';
 
+    $needsSave = FALSE;
+
     try {
       $client = $this->stripeHelper->client();
 
@@ -204,19 +224,19 @@ final class StripeAssignmentManager {
       $remaining = $this->filterStorageItems($subscription, (string) $assignment->id());
       if (empty($remaining) && ($subscription->metadata['storage_manager_managed'] ?? '') === '1') {
         $client->subscriptions->cancel($subscriptionId, []);
-        if ($assignment->hasField('field_storage_stripe_sub_id')) {
-          $assignment->set('field_storage_stripe_sub_id', '');
+        if ($this->setFieldValue($assignment, 'field_storage_stripe_sub_id', '')) {
+          $needsSave = TRUE;
         }
       }
 
-      if ($assignment->hasField('field_storage_stripe_item_id')) {
-        $assignment->set('field_storage_stripe_item_id', '');
+      if ($this->setFieldValue($assignment, 'field_storage_stripe_item_id', '')) {
+        $needsSave = TRUE;
       }
-      if ($assignment->hasField('field_storage_stripe_status')) {
-        $assignment->set('field_storage_stripe_status', 'canceled');
+      if ($this->setFieldValue($assignment, 'field_storage_stripe_status', 'canceled')) {
+        $needsSave = TRUE;
       }
 
-      if ($assignment->isDirty()) {
+      if ($needsSave) {
         $assignment->save();
       }
     }
@@ -256,21 +276,13 @@ final class StripeAssignmentManager {
       if ($type && $type->hasField('field_stripe_price_id')) {
         $type_price = trim((string) ($type->get('field_stripe_price_id')->value ?? ''));
         if ($type_price !== '') {
-          if ($assignment->hasField('field_stripe_price_id')) {
-            $assignment->set('field_stripe_price_id', $type_price);
-          }
           return $type_price;
         }
       }
     }
 
     $default = trim((string) $this->configFactory->get('storage_manager.settings')->get('stripe.default_price_id'));
-    if ($default !== '' && $assignment->hasField('field_stripe_price_id')) {
-      $assignment->set('field_stripe_price_id', $default);
-      return $default;
-    }
-
-    return '';
+    return $default !== '' ? $default : '';
   }
 
   /**
@@ -401,6 +413,40 @@ final class StripeAssignmentManager {
       }
     }
     return $items;
+  }
+
+  /**
+   * Set a field value only when the new value differs from the current value.
+   */
+  protected function setFieldValue(EckEntityInterface $entity, string $fieldName, $value): bool {
+    if (!$entity->hasField($fieldName)) {
+      return FALSE;
+    }
+
+    $field = $entity->get($fieldName);
+
+    if (is_array($value)) {
+      $current = $field->getValue();
+      if ($current === $value) {
+        return FALSE;
+      }
+      $entity->set($fieldName, $value);
+      return TRUE;
+    }
+
+    $currentValue = $field->isEmpty() ? '' : $field->getString();
+    $newValue = $value === NULL ? '' : (string) $value;
+
+    if ($field->isEmpty() && $newValue === '') {
+      return FALSE;
+    }
+
+    if (!$field->isEmpty() && $currentValue === $newValue) {
+      return FALSE;
+    }
+
+    $entity->set($fieldName, $newValue);
+    return TRUE;
   }
 
 }
