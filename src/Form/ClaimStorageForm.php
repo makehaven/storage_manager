@@ -20,17 +20,25 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class ClaimStorageForm extends FormBase {
 
-  public function __construct(
-    private readonly EntityTypeManagerInterface $storageEntityTypeManager,
-    private readonly AssignmentGuard $guard,
-    private readonly ConfigFactoryInterface $storageConfigFactory,
-    private readonly NotificationManager $notificationManager,
-    private readonly StripeAssignmentManager $stripeAssignmentManager,
-    private readonly AccountProxyInterface $storageCurrentUser,
-    private readonly CacheTagsInvalidatorInterface $cacheTagsInvalidator
-  ) {}
+  protected EntityTypeManagerInterface $storageEntityTypeManager;
+  protected AssignmentGuard $guard;
+  protected ConfigFactoryInterface $storageConfigFactory;
+  protected NotificationManager $notificationManager;
+  protected StripeAssignmentManager $stripeAssignmentManager;
+  protected AccountProxyInterface $storageCurrentUser;
+  protected CacheTagsInvalidatorInterface $cacheTagsInvalidator;
 
-  public static function create(ContainerInterface $container): static {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, AssignmentGuard $guard, ConfigFactoryInterface $config_factory, NotificationManager $notification_manager, StripeAssignmentManager $stripe_assignment_manager, AccountProxyInterface $current_user, CacheTagsInvalidatorInterface $cache_tags_invalidator) {
+    $this->storageEntityTypeManager = $entity_type_manager;
+    $this->guard = $guard;
+    $this->storageConfigFactory = $config_factory;
+    $this->notificationManager = $notification_manager;
+    $this->stripeAssignmentManager = $stripe_assignment_manager;
+    $this->storageCurrentUser = $current_user;
+    $this->cacheTagsInvalidator = $cache_tags_invalidator;
+  }
+
+  public static function create(ContainerInterface $container): self {
     return new static(
       $container->get('entity_type.manager'),
       $container->get('storage_manager.assignment_guard'),
@@ -104,51 +112,47 @@ class ClaimStorageForm extends FormBase {
 
     $filtered_units = $this->filterUnitsByType($units, $selected_type);
 
-    if (!$filtered_units) {
-      $form['units_wrapper'] = [
-        '#type' => 'container',
-        '#attributes' => ['id' => 'storage-claim-units'],
-        'no_units' => [
-          '#type' => 'container',
-          '#attributes' => ['class' => ['messages', 'messages--warning']],
-          'text' => ['#markup' => $this->t('No storage units are currently available to claim. Please check back later or contact staff for assistance.')],
-        ],
-      ];
-      return $form;
-    }
-
-    $options = [];
-    foreach ($filtered_units as $unit) {
-      $unit_label = $unit->get('field_storage_unit_id')->value ?: $unit->id();
-      $area = $unit->get('field_storage_area')->entity?->label();
-      $type = $unit->get('field_storage_type')->entity?->label();
-      $price_value = $unit->get('field_storage_type')->entity?->get('field_monthly_price')->value;
-      $price = $price_value !== NULL && $price_value !== ''
-        ? '$' . number_format((float) $price_value, 2)
-        : $this->t('No monthly cost set');
-
-      $parts = [$this->t('Unit @unit', ['@unit' => $unit_label])];
-      if ($area) {
-        $parts[] = $area;
-      }
-      if ($type) {
-        $parts[] = $type;
-      }
-      $parts[] = $price;
-      $options[$unit->id()] = implode(' · ', array_map(fn($item) => (string) $item, $parts));
-    }
-
     $form['units_wrapper'] = [
       '#type' => 'container',
       '#attributes' => ['id' => 'storage-claim-units'],
     ];
 
-    $form['units_wrapper']['storage_unit'] = [
-      '#type' => 'radios',
-      '#title' => $this->t('Available storage units'),
-      '#options' => $options,
-      '#required' => TRUE,
-    ];
+    if (!$filtered_units) {
+      $form['units_wrapper']['no_units'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['messages', 'messages--warning']],
+        'text' => ['#markup' => $this->t('No storage units are currently available to claim. Please check back later or contact staff for assistance.')],
+      ];
+    }
+    else {
+      $options = [];
+      foreach ($filtered_units as $unit) {
+        $unit_label = $unit->get('field_storage_unit_id')->value ?: $unit->id();
+        $area = $unit->get('field_storage_area')->entity?->label();
+        $type = $unit->get('field_storage_type')->entity?->label();
+        $price_value = $unit->get('field_storage_type')->entity?->get('field_monthly_price')->value;
+        $price = $price_value !== NULL && $price_value !== ''
+          ? '$' . number_format((float) $price_value, 2)
+          : $this->t('No monthly cost set');
+
+        $parts = [$this->t('Unit @unit', ['@unit' => $unit_label])];
+        if ($area) {
+          $parts[] = $area;
+        }
+        if ($type) {
+          $parts[] = $type;
+        }
+        $parts[] = $price;
+        $options[$unit->id()] = implode(' · ', array_map(fn($item) => (string) $item, $parts));
+      }
+
+      $form['units_wrapper']['storage_unit'] = [
+        '#type' => 'radios',
+        '#title' => $this->t('Available storage units'),
+        '#options' => $options,
+        '#required' => TRUE,
+      ];
+    }
 
     $agreement = $this->storageConfigFactory->get('storage_manager.settings')->get('claim_agreement');
     if (!empty($agreement['value'])) {
@@ -157,6 +161,7 @@ class ClaimStorageForm extends FormBase {
         '#text' => $agreement['value'],
         '#format' => $agreement['format'] ?? 'basic_html',
         '#weight' => 20,
+        '#access' => !empty($filtered_units),
       ];
     }
 
@@ -165,10 +170,12 @@ class ClaimStorageForm extends FormBase {
       '#title' => $this->t('I agree to the storage terms above.'),
       '#required' => TRUE,
       '#weight' => 25,
+      '#access' => !empty($filtered_units),
     ];
 
     $form['actions'] = [
       '#type' => 'actions',
+      '#access' => !empty($filtered_units),
     ];
     $form['actions']['submit'] = [
       '#type' => 'submit',
