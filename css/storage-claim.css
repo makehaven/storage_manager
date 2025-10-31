@@ -1,0 +1,45 @@
+/**
+ * @file
+ * Pill filter styling for the storage claim page.
+ */
+
+.storage-claim-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.storage-claim-filters__label {
+  font-weight: bold;
+  margin-right: 0.5rem;
+}
+
+.storage-claim-filters input[type="submit"] {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 1rem;
+  text-decoration: none;
+  color: #333;
+  background-color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  line-height: 1.5;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.storage-claim-filters input[type="submit"].is-active {
+  background-color: #007bff;
+  color: #fff;
+  border-color: #007bff;
+}
+
+.storage-claim-filters input[type="submit"]:hover:not(.is-active) {
+  background-color: #eee;
+  border-color: #aaa;
+}
