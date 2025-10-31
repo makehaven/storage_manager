@@ -9,7 +9,7 @@ label: storage_assignment
 uid: true
 created: true
 changed: true
-title: false
+title: true
 handlers:
   access: Drupal\eck\EckAccessControlHandler
   views_data: Drupal\eck\EckViewsData
