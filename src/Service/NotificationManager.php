@@ -10,6 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\eck\EckEntityInterface;
 use Drupal\storage_manager\Service\ViolationManager;
 use Drupal\user\UserInterface;
+use Drupal\Core\Url;
 use Psr\Log\LoggerInterface;
 
 class NotificationManager {
@@ -71,6 +72,44 @@ class NotificationManager {
       foreach ($addresses as $address) {
         $this->deliver($event, $address, $langcode, $subject, $body);
       }
+    }
+  }
+
+  /**
+   * Notify configured administrators that Stripe needs manual intervention.
+   */
+  public function notifyManualStripeAction(EckEntityInterface $assignment, string $reason): void {
+    $config = $this->configFactory->get('storage_manager.settings');
+    $recipients = $config->get('notifications.recipients') ?: '';
+    if (!$recipients) {
+      return;
+    }
+    $addresses = array_filter(array_map('trim', explode(',', $recipients)));
+    if (empty($addresses)) {
+      return;
+    }
+
+    $unit = $this->resolveUnit($assignment);
+    $user = $this->resolveUser($assignment);
+    $unitLabel = $unit?->get('field_storage_unit_id')->value ?? $unit?->label() ?? $this->t('Unknown unit');
+    $memberName = $user?->getDisplayName() ?? $this->t('Unknown member');
+    $memberEmail = $user?->getEmail() ?? $this->t('unknown');
+    $reasonText = trim($reason) !== '' ? $reason : $this->t('Unknown Stripe error.');
+    $assignmentUrl = Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()], ['absolute' => TRUE])->toString();
+
+    $subject = $this->t('Manual Stripe action required for storage assignment @id', ['@id' => $assignment->id()]);
+    $body = $this->t("Automatic Stripe synchronization failed for storage assignment @id.\n\nUnit: @unit\nMember: @member (@email)\nReason: @reason\n\nReview the assignment: @url", [
+      '@id' => $assignment->id(),
+      '@unit' => $unitLabel,
+      '@member' => $memberName,
+      '@email' => $memberEmail,
+      '@reason' => $reasonText,
+      '@url' => $assignmentUrl,
+    ]);
+
+    $langcode = $this->languageManager->getDefaultLanguage()->getId();
+    foreach ($addresses as $address) {
+      $this->deliver('manual_stripe_action', $address, $langcode, $subject, $body);
     }
   }
 

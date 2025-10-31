@@ -1,0 +1,18 @@
+uuid: 1e3bb5f5-1f19-4f05-aeb6-795b5e54df2c
+langcode: en
+status: true
+dependencies:
+  module:
+    - eck
+id: storage_assignment.field_stripe_manual_review
+field_name: field_stripe_manual_review
+entity_type: storage_assignment
+type: boolean
+settings: {  }
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

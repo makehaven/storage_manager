@@ -326,3 +326,75 @@ function storage_manager_update_10001() {
 
   return t('Enabled titles for storage manager ECK entities.');
 }
+
+/**
+ * Add fields to flag Stripe manual review requirements.
+ */
+function storage_manager_update_10002() {
+  if ($old_field = FieldConfig::loadByName('storage_assignment', 'storage_assignment', 'field_storage_stripe_manual_review')) {
+    $old_field->delete();
+  }
+  if ($old_storage = FieldStorageConfig::loadByName('storage_assignment', 'field_storage_stripe_manual_review')) {
+    $old_storage->delete();
+  }
+  if ($old_field = FieldConfig::loadByName('storage_assignment', 'storage_assignment', 'field_storage_stripe_manual_note')) {
+    $old_field->delete();
+  }
+  if ($old_storage = FieldStorageConfig::loadByName('storage_assignment', 'field_storage_stripe_manual_note')) {
+    $old_storage->delete();
+  }
+
+  $field_storage = FieldStorageConfig::loadByName('storage_assignment', 'field_stripe_manual_review');
+  if (!$field_storage) {
+    $field_storage = FieldStorageConfig::create([
+      'field_name' => 'field_stripe_manual_review',
+      'entity_type' => 'storage_assignment',
+      'type' => 'boolean',
+      'settings' => [],
+      'cardinality' => 1,
+      'translatable' => FALSE,
+    ]);
+    $field_storage->save();
+  }
+
+  $field = FieldConfig::loadByName('storage_assignment', 'storage_assignment', 'field_stripe_manual_review');
+  if (!$field) {
+    FieldConfig::create([
+      'field_storage' => $field_storage,
+      'bundle' => 'storage_assignment',
+      'label' => 'Stripe Manual Review Required',
+      'settings' => [
+        'on_label' => 'Manual review required',
+        'off_label' => 'Manual review not required',
+      ],
+      'required' => FALSE,
+    ])->save();
+  }
+
+  $note_storage = FieldStorageConfig::loadByName('storage_assignment', 'field_stripe_manual_note');
+  if (!$note_storage) {
+    $note_storage = FieldStorageConfig::create([
+      'field_name' => 'field_stripe_manual_note',
+      'entity_type' => 'storage_assignment',
+      'type' => 'string_long',
+      'settings' => [
+        'case_sensitive' => FALSE,
+      ],
+      'cardinality' => 1,
+      'translatable' => FALSE,
+    ]);
+    $note_storage->save();
+  }
+
+  $note_field = FieldConfig::loadByName('storage_assignment', 'storage_assignment', 'field_stripe_manual_note');
+  if (!$note_field) {
+    FieldConfig::create([
+      'field_storage' => $note_storage,
+      'bundle' => 'storage_assignment',
+      'label' => 'Stripe Manual Review Notes',
+      'required' => FALSE,
+    ])->save();
+  }
+
+  return t('Added Stripe manual review tracking fields.');
+}

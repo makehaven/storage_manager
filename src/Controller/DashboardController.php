@@ -5,6 +5,7 @@ namespace Drupal\storage_manager\Controller;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\mh_stripe\Service\StripeHelper;
@@ -210,9 +211,23 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       }
       $assignment_id = $assignment_query->range(0, 1)->execute();
       $assignment = $assignment_id ? $assignment_storage->load(reset($assignment_id)) : NULL;
-      $billing_status = $this->t('—');
+      $billing_status = $this->t('Not linked');
       $customer_id = '';
       $subscription_id = '';
+      $manual_required = FALSE;
+      $manual_note = '';
+      $billing_container = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['storage-manager-billing']],
+        'status' => [
+          '#type' => 'html_tag',
+          '#tag' => 'span',
+          '#value' => $billing_status,
+          '#attributes' => [
+            'class' => ['storage-manager-billing-pill', 'storage-manager-billing-pill--unlinked'],
+          ],
+        ],
+      ];
 
       if ($assignment) {
         $member_entity = $assignment->get('field_storage_user')->entity;
@@ -233,43 +248,91 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         $subscription_status = $assignment->hasField('field_storage_stripe_status')
           ? (string) ($assignment->get('field_storage_stripe_status')->value ?? '')
           : '';
-        if ($subscription_status !== '') {
-          $status_label = ucfirst(str_replace('_', ' ', $subscription_status));
+        if ($assignment->hasField('field_stripe_manual_review')) {
+          $manual_required = (bool) ($assignment->get('field_stripe_manual_review')->value ?? FALSE);
         }
-        elseif ($subscription_id !== '') {
-          $status_label = $this->t('Active');
+        if ($assignment->hasField('field_stripe_manual_note')) {
+          $manual_note = trim((string) ($assignment->get('field_stripe_manual_note')->value ?? ''));
+        }
+        $original_status_label = $status_label;
+
+        if ($stripeEnabled) {
+          if ($subscription_status !== '') {
+            $status_label = ucfirst(str_replace('_', ' ', $subscription_status));
+          }
+          elseif ($subscription_id !== '') {
+            $status_label = $this->t('Active');
+          }
+          else {
+            $status_label = $this->t('Not linked');
+          }
         }
         else {
-          $status_label = $this->t('Not linked');
+          $status_label = $original_status_label;
         }
+
+        $billing_display = $billing_status;
 
         if ($stripeEnabled) {
           if ($member_entity?->hasField($customerFieldName)) {
             $customer_id = $member_entity->get($customerFieldName)->value ?? '';
           }
 
-          if ($subscription_id) {
-            $billing_status = Link::fromTextAndUrl(
-              $status_label,
+          if ($subscription_id !== '') {
+            $billing_display = $this->t('Stripe Connected');
+            $billing_status = $billing_display;
+            $billing_container['status'] = Link::fromTextAndUrl(
+              $billing_display,
               Url::fromUri($this->stripeHelper->subscriptionDashboardUrl($subscription_id), [
-                'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+                'attributes' => [
+                  'target' => '_blank',
+                  'rel' => 'noopener',
+                  'class' => ['storage-manager-billing-pill', 'storage-manager-billing-pill--active'],
+                ],
               ])
-            )->toString();
+            )->toRenderable();
           }
-          elseif ($customer_id) {
-            $billing_status = Link::fromTextAndUrl(
-              $this->t('Customer'),
+          elseif ($customer_id !== '') {
+            $billing_display = $this->t('Stripe Customer');
+            $billing_status = $billing_display;
+            $billing_container['status'] = Link::fromTextAndUrl(
+              $billing_display,
               Url::fromUri($this->stripeHelper->customerDashboardUrl((string) $customer_id), [
-                'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
+                'attributes' => [
+                  'target' => '_blank',
+                  'rel' => 'noopener',
+                  'class' => ['storage-manager-billing-pill', 'storage-manager-billing-pill--customer'],
+                ],
               ])
-            )->toString();
+            )->toRenderable();
           }
           else {
-            $billing_status = $status_label;
+            $billing_display = $this->t('Not linked');
+            $billing_status = $billing_display;
+            $billing_container['status']['#value'] = $billing_display;
+            $billing_container['status']['#attributes']['class'] = ['storage-manager-billing-pill', 'storage-manager-billing-pill--unlinked'];
           }
         }
         else {
-          $billing_status = $this->t('—');
+          $billing_display = $this->t('—');
+          $billing_status = $billing_display;
+          $billing_container['status']['#value'] = $billing_display;
+          $billing_container['status']['#attributes']['class'] = ['storage-manager-billing-pill', 'storage-manager-billing-pill--unlinked'];
+        }
+
+        if ($manual_required) {
+          $display_note = $manual_note !== '' ? Unicode::truncate($manual_note, 180, TRUE) : '';
+          $manual_label = $display_note !== ''
+            ? $this->t('Manual review required – @note', ['@note' => $display_note])
+            : $this->t('Manual review required');
+          $billing_container['manual'] = [
+            '#type' => 'html_tag',
+            '#tag' => 'span',
+            '#value' => $manual_label,
+            '#attributes' => ['class' => ['storage-manager-billing-manual']],
+            '#prefix' => ' ',
+          ];
+          $billing_status = trim($billing_display . ' ' . $manual_label);
         }
 
         $active_violation = $violation_manager->loadActiveViolation((int) $assignment->id());
@@ -307,6 +370,17 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       }
 
       $ops = [];
+
+      if ($assignment && $manual_required) {
+        $ops['stripe_manual_confirm'] = [
+          'title' => $this->t('Confirm Stripe Manual Fix'),
+          'url' => Url::fromRoute('storage_manager.assignment_manual_confirm', ['storage_assignment' => $assignment->id()], [
+            'query' => ['destination' => '/admin/storage'],
+          ]),
+          'weight' => -200,
+        ];
+      }
+
       if ($assignment) {
         // Occupied unit.
         $ops['release'] = [
@@ -314,6 +388,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
           'url' => Url::fromRoute('storage_manager.unit_release', ['storage_unit' => $unit->id()], [
             'query' => ['destination' => '/admin/storage'],
           ]),
+          'weight' => -50,
         ];
         $edit_label = $active_violation
           ? $this->t('Resolve Violation')
@@ -321,11 +396,13 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         $ops['edit_assignment'] = [
           'title' => $edit_label,
           'url' => Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()]),
+          'weight' => 0,
         ];
         if (!$active_violation) {
           $ops['add_violation'] = [
             'title' => $this->t('Add Violation'),
             'url' => Url::fromRoute('storage_manager.start_violation', ['storage_assignment' => $assignment->id()]),
+            'weight' => 10,
           ];
         }
       }
@@ -336,11 +413,14 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
           'url' => Url::fromRoute('storage_manager.unit_assign', ['storage_unit' => $unit->id()], [
             'query' => ['destination' => '/admin/storage'],
           ]),
+          'weight' => -10,
         ];
       }
+
       $ops['edit_unit'] = [
         'title' => $this->t('Edit Unit'),
         'url' => Url::fromRoute('entity.storage_unit.edit_form', ['storage_unit' => $unit->id()]),
+        'weight' => 80,
       ];
 
       if ($assignment && $stripeEnabled) {
@@ -350,7 +430,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
             'url' => Url::fromUri($this->stripeHelper->customerDashboardUrl((string) $customer_id), [
               'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
             ]),
-            'weight' => 55,
+            'weight' => 40,
           ];
         }
         if (!empty($subscription_id)) {
@@ -359,7 +439,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
             'url' => Url::fromUri($this->stripeHelper->subscriptionDashboardUrl($subscription_id), [
               'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
             ]),
-            'weight' => 56,
+            'weight' => 45,
           ];
         }
       }
@@ -392,7 +472,7 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         ['data' => $operations_render],
       ];
       if ($stripeEnabled) {
-        array_splice($row, 4, 0, [$billing_status]);
+        array_splice($row, 4, 0, [['data' => $billing_container, 'sort_value' => (string) $billing_status]]);
       }
       $rows[] = $row;
     }
@@ -592,8 +672,38 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
 
     $column_index = $index_map[$field];
     usort($rows, function ($a, $b) use ($column_index, $direction) {
-      $value_a = is_array($a[$column_index]) ? (string) ($a[$column_index]['data']['#markup'] ?? '') : (string) $a[$column_index];
-      $value_b = is_array($b[$column_index]) ? (string) ($b[$column_index]['data']['#markup'] ?? '') : (string) $b[$column_index];
+      $value_a = $a[$column_index];
+      $value_b = $b[$column_index];
+
+      if (is_array($value_a)) {
+        if (isset($value_a['sort_value'])) {
+          $value_a = (string) $value_a['sort_value'];
+        }
+        elseif (isset($value_a['data']['#markup'])) {
+          $value_a = (string) $value_a['data']['#markup'];
+        }
+        else {
+          $value_a = '';
+        }
+      }
+      else {
+        $value_a = (string) $value_a;
+      }
+
+      if (is_array($value_b)) {
+        if (isset($value_b['sort_value'])) {
+          $value_b = (string) $value_b['sort_value'];
+        }
+        elseif (isset($value_b['data']['#markup'])) {
+          $value_b = (string) $value_b['data']['#markup'];
+        }
+        else {
+          $value_b = '';
+        }
+      }
+      else {
+        $value_b = (string) $value_b;
+      }
 
       $result = strcasecmp($value_a, $value_b);
       return $direction === 'desc' ? -$result : $result;

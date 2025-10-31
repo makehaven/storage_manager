@@ -6,6 +6,7 @@ use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 use Drupal\eck\EckEntityInterface;
 use Drupal\storage_manager\Service\NotificationManager;
 use Drupal\storage_manager\Service\ViolationManager;
@@ -66,6 +67,44 @@ class EditAssignmentForm extends FormBase {
       '#default_value' => $assignment->get('field_storage_issue_note')->value,
       '#description' => $this->t('Optional context or notes about this assignment.'),
     ];
+    if ($assignment->hasField('field_stripe_manual_review')) {
+      $manual_required = (bool) ($assignment->get('field_stripe_manual_review')->value ?? FALSE);
+      $manual_note = $assignment->hasField('field_stripe_manual_note')
+        ? (string) ($assignment->get('field_stripe_manual_note')->value ?? '')
+        : '';
+
+      $form['stripe_manual'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Stripe manual follow-up'),
+        '#open' => $manual_required,
+      ];
+      $form['stripe_manual']['manual_status'] = [
+        '#type' => 'item',
+        '#title' => $this->t('Status'),
+        '#markup' => $manual_required
+          ? $this->t('Manual review required')
+          : $this->t('No manual review required'),
+      ];
+      if ($manual_note !== '') {
+        $form['stripe_manual']['manual_note'] = [
+          '#type' => 'item',
+          '#title' => $this->t('Notes'),
+          '#markup' => $manual_note,
+        ];
+      }
+      if ($manual_required) {
+        $form['stripe_manual']['manual_link'] = [
+          '#type' => 'link',
+          '#title' => $this->t('Confirm Stripe manual fix'),
+          '#url' => Url::fromRoute('storage_manager.assignment_manual_confirm', ['storage_assignment' => $assignment->id()], [
+            'query' => ['destination' => '/admin/storage'],
+          ]),
+          '#attributes' => [
+            'class' => ['button', 'button--small'],
+          ],
+        ];
+      }
+    }
 
     if ($assignment->hasField('field_storage_complimentary') && $this->currentUser()->hasPermission('manage storage')) {
       $form['billing'] = [

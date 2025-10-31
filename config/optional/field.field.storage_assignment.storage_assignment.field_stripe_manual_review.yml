@@ -1,0 +1,23 @@
+uuid: 65eb5809-123d-4fe3-aceb-3a9a3972b5c4
+langcode: en
+status: true
+dependencies:
+  config:
+    - eck.eck_type.storage_assignment.storage_assignment
+    - field.storage.storage_assignment.field_stripe_manual_review
+id: storage_assignment.storage_assignment.field_stripe_manual_review
+field_name: field_stripe_manual_review
+entity_type: storage_assignment
+bundle: storage_assignment
+label: 'Stripe Manual Review Required'
+description: 'Flagged when automatic Stripe sync fails and manual follow-up is needed.'
+required: false
+translatable: false
+default_value:
+  -
+    value: 0
+default_value_callback: ''
+settings:
+  on_label: 'Manual review required'
+  off_label: 'Manual review not required'
+field_type: boolean

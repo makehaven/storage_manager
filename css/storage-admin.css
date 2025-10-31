@@ -16,8 +16,8 @@
 }
 
 .storage-manager-status-pill--occupied {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: #dbeafe;
+  color: #1d4ed8;
 }
 
 .storage-manager-status-pill--inactive {
@@ -28,6 +28,44 @@
 .storage-manager-status-pill--unknown {
   background-color: #e0f2fe;
   color: #0c4a6e;
+}
+
+.storage-manager-billing {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.storage-manager-billing-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.storage-manager-billing-pill--active {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.storage-manager-billing-pill--customer {
+  background-color: #cffafe;
+  color: #0f766e;
+}
+
+.storage-manager-billing-pill--unlinked {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.storage-manager-billing-manual {
+  color: #b45309;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .storage-manager-hub {

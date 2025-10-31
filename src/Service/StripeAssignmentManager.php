@@ -2,10 +2,12 @@
 
 namespace Drupal\storage_manager\Service;
 
+use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\eck\EckEntityInterface;
 use Drupal\mh_stripe\Service\StripeHelper;
+use Drupal\storage_manager\Service\NotificationManager;
 use Drupal\user\UserInterface;
 use Psr\Log\LoggerInterface;
 use Stripe\Exception\ApiErrorException;
@@ -23,6 +25,7 @@ final class StripeAssignmentManager {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly ?StripeHelper $stripeHelper,
     private readonly LoggerInterface $logger,
+    private readonly NotificationManager $notificationManager,
   ) {}
 
   /**
@@ -80,6 +83,7 @@ final class StripeAssignmentManager {
 
     if ($priceId === '') {
       $this->logger->warning('Storage assignment @id does not have a Stripe price configured; skipping billing setup.', ['@id' => $assignment->id()]);
+      $this->flagManualReviewRequired($assignment, 'Storage assignment is missing a Stripe price ID.');
       throw new \RuntimeException('A Stripe price must be configured before Stripe billing can be synchronized.');
     }
 
@@ -89,6 +93,7 @@ final class StripeAssignmentManager {
         '@uid' => $user->id(),
         '@id' => $assignment->id(),
       ]);
+      $this->flagManualReviewRequired($assignment, 'Unable to locate or create a Stripe customer for this member.');
       throw new \RuntimeException('Unable to locate a Stripe customer for this member.');
     }
 
@@ -201,11 +206,16 @@ final class StripeAssignmentManager {
         }
       }
 
+      if ($this->clearManualReview($assignment)) {
+        $needsSave = TRUE;
+      }
+
       if ($needsSave) {
         $assignment->save();
       }
     }
     catch (ApiErrorException $e) {
+      $this->flagManualReviewRequired($assignment, $e->getMessage());
       $this->logger->error('Stripe API error while syncing storage assignment @id: @message', [
         '@id' => $assignment->id(),
         '@message' => $e->getMessage(),
@@ -213,6 +223,7 @@ final class StripeAssignmentManager {
       throw new \RuntimeException($e->getMessage(), 0, $e);
     }
     catch (\Throwable $e) {
+      $this->flagManualReviewRequired($assignment, $e->getMessage());
       $this->logger->error('Unexpected error while syncing storage assignment @id: @message', [
         '@id' => $assignment->id(),
         '@message' => $e->getMessage(),
@@ -307,11 +318,16 @@ final class StripeAssignmentManager {
         $needsSave = TRUE;
       }
 
+      if ($this->clearManualReview($assignment)) {
+        $needsSave = TRUE;
+      }
+
       if ($needsSave) {
         $assignment->save();
       }
     }
     catch (ApiErrorException $e) {
+      $this->flagManualReviewRequired($assignment, $e->getMessage());
       $this->logger->error('Stripe API error while releasing storage assignment @id: @message', [
         '@id' => $assignment->id(),
         '@message' => $e->getMessage(),
@@ -319,6 +335,7 @@ final class StripeAssignmentManager {
       throw new \RuntimeException($e->getMessage(), 0, $e);
     }
     catch (\Throwable $e) {
+      $this->flagManualReviewRequired($assignment, $e->getMessage());
       $this->logger->error('Unexpected error while releasing storage assignment @id: @message', [
         '@id' => $assignment->id(),
         '@message' => $e->getMessage(),
@@ -661,6 +678,77 @@ final class StripeAssignmentManager {
     }
 
     return isset($cache[$fieldName]);
+  }
+
+  /**
+   * Flag an assignment for manual Stripe review and notify staff.
+   */
+  protected function flagManualReviewRequired(EckEntityInterface $assignment, string $reason): void {
+    if (!$assignment->hasField('field_stripe_manual_review')) {
+      return;
+    }
+
+    $wasFlagged = (bool) ($assignment->get('field_stripe_manual_review')->value ?? FALSE);
+    $needsSave = FALSE;
+
+    if ($this->setFieldValue($assignment, 'field_stripe_manual_review', '1')) {
+      $needsSave = TRUE;
+    }
+
+    if ($assignment->hasField('field_stripe_manual_note')) {
+      $note = trim($reason) !== '' ? trim($reason) : 'Stripe sync failed; manual follow-up required.';
+      $note = Unicode::truncate($note, 1000, TRUE, TRUE);
+      if ($this->setFieldValue($assignment, 'field_stripe_manual_note', $note)) {
+        $needsSave = TRUE;
+      }
+    }
+
+    if ($needsSave) {
+      try {
+        $assignment->save();
+      }
+      catch (\Throwable $saveError) {
+        $this->logger->error('Failed to persist manual Stripe review flag for assignment @id: @message', [
+          '@id' => $assignment->id(),
+          '@message' => $saveError->getMessage(),
+        ]);
+      }
+    }
+
+    if (!$wasFlagged) {
+      try {
+        $this->notificationManager->notifyManualStripeAction($assignment, $reason);
+      }
+      catch (\Throwable $notifyError) {
+        $this->logger->error('Failed to send manual Stripe review notification for assignment @id: @message', [
+          '@id' => $assignment->id(),
+          '@message' => $notifyError->getMessage(),
+        ]);
+      }
+    }
+  }
+
+  /**
+   * Clear any manual Stripe review flag and optionally record a note.
+   */
+  public function clearManualReview(EckEntityInterface $assignment, ?string $note = ''): bool {
+    if (!$assignment->hasField('field_stripe_manual_review')) {
+      return FALSE;
+    }
+
+    $changed = FALSE;
+    if ($this->setFieldValue($assignment, 'field_stripe_manual_review', '0')) {
+      $changed = TRUE;
+    }
+
+    if ($assignment->hasField('field_stripe_manual_note') && $note !== NULL) {
+      $noteValue = $note === '' ? '' : Unicode::truncate($note, 1000, TRUE, TRUE);
+      if ($this->setFieldValue($assignment, 'field_stripe_manual_note', $noteValue)) {
+        $changed = TRUE;
+      }
+    }
+
+    return $changed;
   }
 
   /**
