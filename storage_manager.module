@@ -91,3 +91,18 @@ function storage_manager_entity_operation(EntityInterface $entity) {
 
   return $operations;
 }
+
+/**
+ * Implements hook_eck_entity_presave().
+ */
+function storage_manager_eck_entity_presave(EntityInterface $entity) {
+  switch ($entity->getEntityTypeId()) {
+    case 'storage_assignment':
+      $entity->setTitle('Assignment #' . $entity->id());
+      break;
+
+    case 'storage_violation':
+      $entity->setTitle('Violation #' . $entity->id());
+      break;
+  }
+}
