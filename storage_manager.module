@@ -35,11 +35,21 @@ function _storage_manager_storage_unit_redirect_submit(array &$form, \Drupal\Cor
  * Implements hook_entity_insert().
  */
 function storage_manager_entity_insert(EntityInterface $entity) {
-  if ($entity->getEntityTypeId() === 'storage_unit') {
-    if (!$entity->get('field_storage_unit_id')->value) {
-      $entity->set('field_storage_unit_id', $entity->id());
-      $entity->save();
-    }
+  switch ($entity->getEntityTypeId()) {
+    case 'storage_unit':
+      if (!$entity->get('field_storage_unit_id')->value) {
+        $entity->set('field_storage_unit_id', $entity->id());
+        $entity->save();
+      }
+      break;
+
+    case 'storage_assignment':
+      $entity->setTitle('Assignment #' . $entity->id())->save();
+      break;
+
+    case 'storage_violation':
+      $entity->setTitle('Violation #' . $entity->id())->save();
+      break;
   }
 }
 
@@ -98,11 +108,15 @@ function storage_manager_entity_operation(EntityInterface $entity) {
 function storage_manager_eck_entity_presave(EntityInterface $entity) {
   switch ($entity->getEntityTypeId()) {
     case 'storage_assignment':
-      $entity->setTitle('Assignment #' . $entity->id());
+      if (!$entity->isNew()) {
+        $entity->setTitle('Assignment #' . $entity->id());
+      }
       break;
 
     case 'storage_violation':
-      $entity->setTitle('Violation #' . $entity->id());
+      if (!$entity->isNew()) {
+        $entity->setTitle('Violation #' . $entity->id());
+      }
       break;
   }
 }
