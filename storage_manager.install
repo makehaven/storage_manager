@@ -278,3 +278,45 @@ function _storage_manager_seed_storage_types(): void {
     $term->save();
   }
 }
+
+/**
+ * Enable titles for core ECK entities.
+ */
+function storage_manager_update_10001() {
+  $config_names = [
+    'eck.eck_entity_type.storage_assignment',
+    'eck.eck_entity_type.storage_unit',
+    'eck.eck_entity_type.storage_violation',
+  ];
+  $config_factory = \Drupal::configFactory();
+
+  foreach ($config_names as $config_name) {
+    $config = $config_factory->getEditable($config_name);
+    if ($config && !$config->get('title')) {
+      $config->set('title', TRUE)->save();
+    }
+  }
+
+  $storage_unit_bundle = $config_factory->getEditable('eck.eck_type.storage_unit.storage_unit');
+  if ($storage_unit_bundle && !$storage_unit_bundle->get('title_field')) {
+    $storage_unit_bundle->set('title_field', 'field_storage_unit_id')->save();
+  }
+
+  // A manual update is required to apply the schema changes.
+  _storage_manager_apply_entity_definition_updates();
+
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $sa_storage = $entity_type_manager->getStorage('storage_assignment');
+  $sa_ids = $sa_storage->getQuery()->accessCheck(FALSE)->execute();
+  foreach ($sa_storage->loadMultiple($sa_ids) as $sa) {
+    $sa->setTitle('Assignment #' . $sa->id())->save();
+  }
+
+  $sv_storage = $entity_type_manager->getStorage('storage_violation');
+  $sv_ids = $sv_storage->getQuery()->accessCheck(FALSE)->execute();
+  foreach ($sv_storage->loadMultiple($sv_ids) as $sv) {
+    $sv->setTitle('Violation #' . $sv->id())->save();
+  }
+
+  return t('Enabled titles for storage manager ECK entities.');
+}

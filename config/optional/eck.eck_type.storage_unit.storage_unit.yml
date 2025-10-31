@@ -7,4 +7,3 @@ dependencies:
 name: 'Storage Unit'
 type: storage_unit
 description: ''
-title_field: field_storage_unit_id
