@@ -78,37 +78,57 @@ class ClaimStorageForm extends FormBase {
       ];
     }
 
+    $form['#attached']['library'][] = 'storage_manager/claim';
+
     $type_options = $this->buildTypeOptions($units);
     $selected_type = $form_state->getValue('filter_type') ?: NULL;
 
-    $form['filter_wrapper'] = [
+    $form['filter_pills'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['storage-claim-filter']],
+      '#attributes' => ['class' => ['storage-claim-filters']],
       '#weight' => -10,
       '#access' => !empty($type_options),
     ];
-    $form['filter_wrapper']['filter_type'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Filter by storage type'),
-      '#options' => $type_options,
-      '#empty_option' => $this->t('- All types -'),
-      '#default_value' => $selected_type,
-      '#ajax' => [
-        'callback' => '::refreshAvailableUnits',
-        'event' => 'change',
-        'wrapper' => 'storage-claim-units',
-      ],
+
+    $form['filter_pills']['label'] = [
+      '#markup' => '<span class="storage-claim-filters__label">' . $this->t('Filter by type:') . '</span>',
     ];
-    $form['filter_wrapper']['reset'] = [
+
+    $all_button_classes = [];
+    if (!$selected_type) {
+      $all_button_classes[] = 'is-active';
+    }
+    $form['filter_pills']['all'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Reset'),
+      '#value' => $this->t('All types'),
+      '#name' => 'filter-reset',
+      '#submit' => ['::applyAndRebuild'],
       '#limit_validation_errors' => [],
-      '#submit' => ['::resetFilters'],
       '#ajax' => [
         'callback' => '::refreshAvailableUnits',
         'wrapper' => 'storage-claim-units',
       ],
+      '#attributes' => ['class' => $all_button_classes],
     ];
+
+    foreach ($type_options as $id => $label) {
+      $button_classes = [];
+      if ((string) $id === (string) $selected_type) {
+        $button_classes[] = 'is-active';
+      }
+      $form['filter_pills']['type_' . $id] = [
+        '#type' => 'submit',
+        '#value' => $label,
+        '#name' => 'filter-type-' . $id,
+        '#submit' => ['::applyAndRebuild'],
+        '#limit_validation_errors' => [],
+        '#ajax' => [
+          'callback' => '::refreshAvailableUnits',
+          'wrapper' => 'storage-claim-units',
+        ],
+        '#attributes' => ['class' => $button_classes],
+      ];
+    }
 
     $filtered_units = $this->filterUnitsByType($units, $selected_type);
 
@@ -344,10 +364,21 @@ class ClaimStorageForm extends FormBase {
   }
 
   /**
-   * Reset filter handler.
+   * Submit handler for all pill filters.
    */
-  public function resetFilters(array &$form, FormStateInterface $form_state): void {
-    $form_state->setValue('filter_type', NULL);
+  public function applyAndRebuild(array &$form, FormStateInterface $form_state): void {
+    $trigger = $form_state->getTriggeringElement();
+    $name = $trigger['#name'] ?? 'filter-reset';
+
+    if ($name === 'filter-reset') {
+      $form_state->setValue('filter_type', NULL);
+    }
+    else {
+      $parts = explode('-', $name);
+      $type_id = end($parts);
+      $form_state->setValue('filter_type', $type_id);
+    }
+
     $form_state->setRebuild(TRUE);
   }
 }
