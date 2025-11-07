@@ -19,10 +19,20 @@ class RouteSubscriber extends RouteSubscriberBase {
     // but the container is not rebuilt.
     //
     $module_handler = \Drupal::moduleHandler();
+    $config = \Drupal::config('storage_manager.settings');
+    $portal_enabled = (bool) $config->get('stripe.enable_portal_link');
+
     if (!$module_handler->moduleExists('mh_stripe')) {
       if ($route = $collection->get('storage_manager_billing.sub_create_or_open')) {
         $route->setRequirement('_access', 'FALSE');
       }
+      if ($route = $collection->get('storage_manager_billing.portal')) {
+        $route->setRequirement('_access', 'FALSE');
+      }
+      return;
+    }
+
+    if (!$portal_enabled) {
       if ($route = $collection->get('storage_manager_billing.portal')) {
         $route->setRequirement('_access', 'FALSE');
       }

@@ -137,6 +137,18 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       ],
     ];
 
+    $form['stripe']['enable_portal_link'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Show billing portal link to members'),
+      '#default_value' => $config->get('stripe.enable_portal_link'),
+      '#description' => $this->t('Requires configuring the Stripe Customer Portal in the corresponding (test/live) dashboard.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="stripe[enable_billing]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
     $form['violation'] = [
       '#type' => 'details',
       '#title' => $this->t('Violation defaults'),
@@ -297,6 +309,7 @@ class StorageManagerSettingsForm extends ConfigFormBase {
     $stripe_settings = $form_state->getValue('stripe');
     $config->set('stripe.enable_billing', $stripe_settings['enable_billing']);
     $config->set('stripe.default_price_id', $stripe_settings['default_price_id']);
+    $config->set('stripe.enable_portal_link', !empty($stripe_settings['enable_portal_link']));
 
     $violation_settings = $form_state->getValue('violation');
     $default_daily = $violation_settings['default_daily_rate'];

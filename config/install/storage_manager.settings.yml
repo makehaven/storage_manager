@@ -1,3 +1,7 @@
+stripe:
+  enable_billing: false
+  default_price_id: ''
+  enable_portal_link: false
 claim_agreement:
   value: ''
   format: basic_html

@@ -233,6 +233,106 @@ final class StripeAssignmentManager {
   }
 
   /**
+   * Returns the resolved Stripe price ID for an assignment.
+   */
+  public function getAssignmentPriceId(EckEntityInterface $assignment): string {
+    return $this->resolvePriceId($assignment);
+  }
+
+  /**
+   * Returns the stored Stripe customer ID for a user without creating one.
+   */
+  public function getStoredCustomerId(UserInterface $user): string {
+    if ($this->stripeHelper === NULL) {
+      return '';
+    }
+    $field = $this->stripeHelper->customerFieldName();
+    return trim((string) ($user->get($field)->value ?? ''));
+  }
+
+  /**
+   * Loads all subscriptions for a Stripe customer.
+   *
+   * @return \Stripe\Subscription[]
+   *   The list of subscriptions (may be empty).
+   */
+  public function loadCustomerSubscriptions(string $customerId): array {
+    if ($this->stripeHelper === NULL || $customerId === '') {
+      return [];
+    }
+
+    try {
+      $client = $this->stripeHelper->client();
+      $result = $client->subscriptions->all([
+        'customer' => $customerId,
+        'status' => 'all',
+        'limit' => 100,
+        'expand' => ['data.items.data'],
+      ]);
+      $subscriptions = [];
+      foreach ($result->autoPagingIterator() as $subscription) {
+        $subscriptions[] = $subscription;
+      }
+      return $subscriptions;
+    }
+    catch (\Throwable $e) {
+      $this->logger->error('Failed to load Stripe subscriptions for customer @customer: @message', [
+        '@customer' => $customerId,
+        '@message' => $e->getMessage(),
+      ]);
+      return [];
+    }
+  }
+
+  /**
+   * Link an assignment to an existing Stripe subscription item.
+   */
+  public function linkAssignmentToSubscriptionItem(EckEntityInterface $assignment, string $subscriptionId, string $itemId): void {
+    if (!$this->isEnabled() || $this->stripeHelper === NULL) {
+      throw new \RuntimeException('Stripe integration is disabled.');
+    }
+    if ($subscriptionId === '' || $itemId === '') {
+      throw new \InvalidArgumentException('Subscription and item IDs are required.');
+    }
+
+    $client = $this->stripeHelper->client();
+    $subscription = $client->subscriptions->retrieve($subscriptionId, ['expand' => ['items.data']]);
+    $subscriptionItem = NULL;
+    foreach ($subscription->items->data as $item) {
+      if ($item->id === $itemId) {
+        $subscriptionItem = $item;
+        break;
+      }
+    }
+    if ($subscriptionItem === NULL) {
+      throw new \RuntimeException('Unable to locate the specified subscription item on Stripe.');
+    }
+
+    $assignmentId = (int) $assignment->id();
+    $subscriptionAssignments = $this->collectAssignmentIdsForSubscription($subscription, $assignmentId);
+    $subscriptionAssignments[] = $assignmentId;
+    $subscriptionAssignments = array_values(array_unique($subscriptionAssignments));
+
+    $itemAssignments = $this->collectAssignmentIdsForItem($subscription, $subscriptionItem, $assignmentId);
+    $itemAssignments[] = $assignmentId;
+    $itemAssignments = array_values(array_unique($itemAssignments));
+
+    $this->updateSubscriptionAssignmentsMetadata($client, $subscriptionId, $subscriptionAssignments);
+    $this->updateSubscriptionItemMetadata($client, $itemId, $itemAssignments, $subscriptionItem->price->id ?? NULL);
+
+    if ($assignment->hasField('field_storage_stripe_sub_id')) {
+      $assignment->set('field_storage_stripe_sub_id', $subscriptionId);
+    }
+    if ($assignment->hasField('field_storage_stripe_item_id')) {
+      $assignment->set('field_storage_stripe_item_id', $itemId);
+    }
+    if ($assignment->hasField('field_storage_stripe_status')) {
+      $assignment->set('field_storage_stripe_status', $subscription->status ?? '');
+    }
+    $assignment->save();
+  }
+
+  /**
    * Remove a storage assignment's Stripe subscription or subscription item.
    */
   public function releaseAssignment(EckEntityInterface $assignment): void {
@@ -274,7 +374,8 @@ final class StripeAssignmentManager {
         $item = $this->resolveSubscriptionItem($client, $subscription, $subscriptionItemId, $assignment, $priceId);
 
         if ($item === NULL) {
-          if ($managedByStorageManager && empty($subscriptionAssignmentIds)) {
+          $hasExternalItems = $this->subscriptionHasExternalItems($subscription, NULL);
+          if ($managedByStorageManager && empty($subscriptionAssignmentIds) && !$hasExternalItems) {
             $client->subscriptions->cancel($subscriptionId, []);
             $canceledSubscription = TRUE;
           }
@@ -290,7 +391,8 @@ final class StripeAssignmentManager {
           $remainingItemAssignments = $this->collectAssignmentIdsForItem($subscription, $item, (int) $assignment->id());
 
           if (empty($remainingItemAssignments)) {
-            if ($managedByStorageManager && empty($subscriptionAssignmentIds)) {
+            $hasExternalItems = $this->subscriptionHasExternalItems($subscription, $item->id ?? NULL);
+            if ($managedByStorageManager && empty($subscriptionAssignmentIds) && !$hasExternalItems) {
               $client->subscriptions->cancel($subscriptionId, []);
               $canceledSubscription = TRUE;
             }
@@ -314,7 +416,8 @@ final class StripeAssignmentManager {
       if ($this->setFieldValue($assignment, 'field_storage_stripe_item_id', '')) {
         $needsSave = TRUE;
       }
-      if ($this->setFieldValue($assignment, 'field_storage_stripe_status', 'canceled')) {
+      $statusValue = $canceledSubscription ? 'canceled' : ($subscription->status ?? '');
+      if ($this->setFieldValue($assignment, 'field_storage_stripe_status', $statusValue)) {
         $needsSave = TRUE;
       }
 
@@ -594,6 +697,21 @@ final class StripeAssignmentManager {
     $assignmentIds = array_map('intval', array_values($ids));
     sort($assignmentIds);
     return $assignmentIds;
+  }
+
+  /**
+   * Determine if a subscription includes items not managed by storage manager.
+   */
+  protected function subscriptionHasExternalItems(Subscription $subscription, ?string $skipItemId = NULL): bool {
+    foreach ($subscription->items->data as $subscriptionItem) {
+      if ($skipItemId !== NULL && $subscriptionItem->id === $skipItemId) {
+        continue;
+      }
+      if (($subscriptionItem->metadata['storage_manager_assignment'] ?? '') !== '1') {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**

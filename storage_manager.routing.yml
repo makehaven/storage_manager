@@ -98,6 +98,18 @@ storage_manager.start_violation:
       storage_assignment:
         type: entity:storage_assignment
 
+storage_manager.sync_customer_subscriptions:
+  path: '/admin/storage/user/{user}/sync-subscriptions'
+  defaults:
+    _title: 'Sync storage subscriptions'
+    _form: '\Drupal\storage_manager\Form\SyncCustomerSubscriptionsForm'
+  requirements:
+    _permission: 'manage storage'
+  options:
+    parameters:
+      user:
+        type: entity:user
+
 storage_manager.user_release:
   path: '/user/storage/release/{storage_assignment}'
   defaults:

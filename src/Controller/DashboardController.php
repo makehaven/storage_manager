@@ -165,8 +165,9 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
     $build['#attached']['library'][] = 'storage_manager/admin';
     $build['hub_links'] = $this->buildHubLinks();
 
+    $settings = $this->storageConfigFactory->get('storage_manager.settings');
     $stripeEnabled = $this->stripeHelper !== NULL
-      && (bool) $this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing');
+      && (bool) $settings->get('stripe.enable_billing');
     if ($stripeEnabled) {
       $build['stripe_notice'] = [
         '#type' => 'container',
@@ -309,8 +310,18 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
           else {
             $billing_display = $this->t('Not linked');
             $billing_status = $billing_display;
-            $billing_container['status']['#value'] = $billing_display;
-            $billing_container['status']['#attributes']['class'] = ['storage-manager-billing-pill', 'storage-manager-billing-pill--unlinked'];
+            if ($member_entity && $this->currentUser()->hasPermission('manage storage')) {
+              $billing_container['status'] = Link::fromTextAndUrl(
+                $billing_display,
+                Url::fromRoute('storage_manager.sync_customer_subscriptions', ['user' => $member_entity->id()])
+              )->toRenderable();
+              $billing_container['status']['#attributes']['class'][] = 'storage-manager-billing-pill';
+              $billing_container['status']['#attributes']['class'][] = 'storage-manager-billing-pill--unlinked';
+            }
+            else {
+              $billing_container['status']['#value'] = $billing_display;
+              $billing_container['status']['#attributes']['class'] = ['storage-manager-billing-pill', 'storage-manager-billing-pill--unlinked'];
+            }
           }
         }
         else {
@@ -424,6 +435,13 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       ];
 
       if ($assignment && $stripeEnabled) {
+        if ($member_entity && $this->currentUser()->hasPermission('manage storage')) {
+          $ops['sync_storage'] = [
+            'title' => $this->t('Sync storage billing'),
+            'url' => Url::fromRoute('storage_manager.sync_customer_subscriptions', ['user' => $member_entity->id()]),
+            'weight' => 35,
+          ];
+        }
         if (!empty($customer_id)) {
           $ops['stripe_customer'] = [
             'title' => $this->t('Open Stripe Customer'),
@@ -625,6 +643,12 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
         $this->t('View assignment'),
         Url::fromRoute('entity.storage_assignment.canonical', ['storage_assignment' => $assignment->id()])
       )->toString();
+      if ($member_entity && $this->currentUser()->hasPermission('manage storage')) {
+        $actions[] = Link::fromTextAndUrl(
+          $this->t('Sync storage billing'),
+          Url::fromRoute('storage_manager.sync_customer_subscriptions', ['user' => $member_entity->id()])
+        )->toString();
+      }
       if ($violation_link) {
         $actions[] = $violation_link;
       }
@@ -897,7 +921,8 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
 
     $config = $this->config('storage_manager.settings');
     $stripe_enabled = (bool) $config->get('stripe.enable_billing');
-    if ($stripe_enabled) {
+    $portal_enabled = $stripe_enabled && (bool) $config->get('stripe.enable_portal_link');
+    if ($portal_enabled) {
       $sections['member']['links'][] = [
         'title' => $this->t('Stripe Billing Portal'),
         'url' => Url::fromRoute('storage_manager_billing.portal'),

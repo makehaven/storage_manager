@@ -92,18 +92,30 @@ function storage_manager_entity_operation(EntityInterface $entity) {
     return [];
   }
 
-  if ($entity->getEntityTypeId() === 'storage_assignment' && \Drupal::currentUser()->hasPermission('manage storage billing')) {
-    /** @var \Drupal\storage_manager\Service\StripeAssignmentManager $stripe_manager */
-    $stripe_manager = \Drupal::service('storage_manager.stripe_assignment_manager');
-    if (!$stripe_manager->isEnabled()) {
-      return $operations;
+  if ($entity->getEntityTypeId() === 'storage_assignment') {
+    if (\Drupal::currentUser()->hasPermission('manage storage')
+      && $entity->hasField('field_storage_user')
+      && ($user_target = $entity->get('field_storage_user')->target_id)) {
+      $operations['sync_storage_billing'] = [
+        'title' => t('Sync storage billing'),
+        'weight' => 40,
+        'url' => Url::fromRoute('storage_manager.sync_customer_subscriptions', ['user' => $user_target]),
+      ];
     }
 
-    $operations['stripe_create_or_open'] = [
-      'title' => t('Sync & Open Stripe Subscription'),
-      'weight' => 50,
-      'url' => Url::fromRoute('storage_manager_billing.sub_create_or_open', ['assignment' => $entity->id()]),
-    ];
+    if (\Drupal::currentUser()->hasPermission('manage storage billing')) {
+      /** @var \Drupal\storage_manager\Service\StripeAssignmentManager $stripe_manager */
+      $stripe_manager = \Drupal::service('storage_manager.stripe_assignment_manager');
+      if (!$stripe_manager->isEnabled()) {
+        return $operations;
+      }
+
+      $operations['stripe_create_or_open'] = [
+        'title' => t('Sync & Open Stripe Subscription'),
+        'weight' => 50,
+        'url' => Url::fromRoute('storage_manager_billing.sub_create_or_open', ['assignment' => $entity->id()]),
+      ];
+    }
   }
 
   return $operations;

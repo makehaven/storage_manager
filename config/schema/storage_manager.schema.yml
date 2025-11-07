@@ -18,6 +18,9 @@ storage_manager.settings:
         default_price_id:
           type: string
           label: 'Default Stripe price ID'
+        enable_portal_link:
+          type: boolean
+          label: 'Enable billing portal link'
     violation:
       type: mapping
       label: 'Violation defaults'
@@ -51,3 +54,17 @@ storage_manager.settings:
                 body:
                   type: text
                   label: 'Email body'
+        templates_admin:
+          type: mapping
+          label: 'Admin notification templates'
+          mapping:
+            '*':
+              type: mapping
+              label: 'Admin notification template'
+              mapping:
+                subject:
+                  type: text
+                  label: 'Admin email subject'
+                body:
+                  type: text
+                  label: 'Admin email body'

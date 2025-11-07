@@ -63,7 +63,9 @@ class ClaimStorageForm extends FormBase {
       '#markup' => '<p>' . $this->t('Choose an available storage unit to claim. The unit will be assigned to your account immediately.') . '</p>',
     ];
 
-    if ($stripe_enabled) {
+    $stripe_portal_enabled = $stripe_enabled && (bool) $config->get('stripe.enable_portal_link');
+
+    if ($stripe_enabled && $stripe_portal_enabled) {
       $portal_link = Link::fromTextAndUrl(
         $this->t('storage billing portal'),
         Url::fromRoute('storage_manager_billing.portal')

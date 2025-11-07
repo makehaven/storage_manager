@@ -29,10 +29,25 @@ final class StoragePortalController extends ControllerBase {
       return $this->redirect('<front>');
     }
 
-    $return_url = Url::fromRoute('entity.user.canonical', ['user' => $uid], ['absolute' => TRUE])->toString();
-    // Pass NULL to use invoices-only configuration from settings if present.
-    $portal_url = $this->stripeHelper->createPortalUrl($customer_id, $return_url, NULL);
+    $settings = $this->config('storage_manager.settings');
+    if (!(bool) $settings->get('stripe.enable_portal_link')) {
+      $this->messenger()->addError($this->t('The billing portal is not available. Please contact staff.'));
+      return $this->redirect('<front>');
+    }
 
-    return new RedirectResponse($portal_url);
+    $return_url = Url::fromRoute('entity.user.canonical', ['user' => $uid], ['absolute' => TRUE])->toString();
+    try {
+      // Pass NULL to use invoices-only configuration from settings if present.
+      $portal_url = $this->stripeHelper->createPortalUrl($customer_id, $return_url, NULL);
+      return new RedirectResponse($portal_url);
+    }
+    catch (\Throwable $e) {
+      $this->getLogger('storage_manager')->error('Stripe portal error for user @uid: @message', [
+        '@uid' => $uid,
+        '@message' => $e->getMessage(),
+      ]);
+      $this->messenger()->addError($this->t('Unable to open the billing portal. Please contact staff while we configure Stripe.'));
+      return $this->redirect('<front>');
+    }
   }
 }
