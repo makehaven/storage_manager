@@ -56,7 +56,7 @@ final class StripeAssignmentManager {
     }
 
     if ($assignment->hasField('field_storage_complimentary') && (bool) $assignment->get('field_storage_complimentary')->value) {
-      // Complimentary assignments are not billed through Stripe.
+      $this->logger->notice('Skipping Stripe sync for complimentary assignment @id.', ['@id' => $assignment->id()]);
       return;
     }
 
@@ -142,10 +142,7 @@ final class StripeAssignmentManager {
               'metadata' => $itemMetadata,
             ],
           ],
-          'metadata' => [
-            'storage_manager_managed' => '1',
-            'storage_assignment_ids' => (string) $assignment->id(),
-          ],
+          'metadata' => $this->buildSubscriptionMetadataPayload([(int) $assignment->id()]),
           'expand' => ['items.data'],
         ]);
         if ($this->setFieldValue($assignment, 'field_storage_stripe_sub_id', $subscription->id)) {
@@ -306,6 +303,9 @@ final class StripeAssignmentManager {
     }
     if ($subscriptionItem === NULL) {
       throw new \RuntimeException('Unable to locate the specified subscription item on Stripe.');
+    }
+    if ($assignment->hasField('field_storage_complimentary') && (bool) $assignment->get('field_storage_complimentary')->value) {
+      throw new \RuntimeException('Complimentary assignments cannot be linked to Stripe billing.');
     }
 
     $assignmentId = (int) $assignment->id();
@@ -520,10 +520,23 @@ final class StripeAssignmentManager {
   protected function buildMetadata(EckEntityInterface $assignment): array {
     $unit = $assignment->get('field_storage_unit')->entity;
     $unitLabel = $unit?->get('field_storage_unit_id')->value ?? $unit?->label() ?? '';
+    $typeLabel = $unit?->get('field_storage_type')->entity?->label() ?? '';
+    $user = $assignment->get('field_storage_user')->entity;
+    $memberName = $user instanceof UserInterface ? $user->getDisplayName() : '';
+    $memberEmail = $user instanceof UserInterface ? $user->getEmail() : '';
+    $priceSnapshot = $assignment->hasField('field_storage_price_snapshot')
+      ? trim((string) ($assignment->get('field_storage_price_snapshot')->value ?? ''))
+      : '';
+    $reference = $this->buildAssignmentReference($unitLabel, $typeLabel);
 
     return array_filter([
       'storage_assignment_id' => (string) $assignment->id(),
       'storage_unit' => $unitLabel,
+      'storage_type' => $typeLabel,
+      'storage_reference' => $reference,
+      'storage_member_name' => $memberName,
+      'storage_member_email' => $memberEmail,
+      'storage_price_snapshot' => $priceSnapshot !== '' ? $priceSnapshot : NULL,
     ]);
   }
 
@@ -719,10 +732,7 @@ final class StripeAssignmentManager {
    */
   protected function updateSubscriptionAssignmentsMetadata(StripeClient $client, string $subscriptionId, array $assignmentIds): void {
     sort($assignmentIds);
-    $metadata = [
-      'storage_manager_managed' => '1',
-      'storage_assignment_ids' => $assignmentIds ? implode(',', $assignmentIds) : '',
-    ];
+    $metadata = $this->buildSubscriptionMetadataPayload($assignmentIds);
 
     $client->subscriptions->update($subscriptionId, ['metadata' => $metadata]);
   }
@@ -732,10 +742,12 @@ final class StripeAssignmentManager {
    */
   protected function updateSubscriptionItemMetadata(StripeClient $client, string $itemId, array $assignmentIds, ?string $priceId = NULL): SubscriptionItem {
     sort($assignmentIds);
+    $reference = $this->buildItemReference($assignmentIds);
     $metadata = [
       'storage_manager_assignment' => '1',
       'storage_assignment_ids' => $assignmentIds ? implode(',', $assignmentIds) : '',
       'storage_assignment_id' => $assignmentIds ? (string) reset($assignmentIds) : '',
+      'storage_reference' => $reference,
     ];
 
     $params = [
@@ -748,6 +760,87 @@ final class StripeAssignmentManager {
     }
 
     return $client->subscriptionItems->update($itemId, $params);
+  }
+
+  /**
+   * Build aggregate metadata for a subscription.
+   */
+  protected function buildSubscriptionMetadataPayload(array $assignmentIds): array {
+    sort($assignmentIds);
+    $metadata = [
+      'storage_manager_managed' => '1',
+      'storage_manager' => '1',
+      'storage_assignment_ids' => $assignmentIds ? implode(',', $assignmentIds) : '',
+    ];
+
+    if (!$assignmentIds) {
+      return $metadata;
+    }
+
+    $storage = $this->entityTypeManager->getStorage('storage_assignment');
+    $assignments = $storage->loadMultiple($assignmentIds);
+    $unitLabels = [];
+    $memberNames = [];
+    $references = [];
+
+    foreach ($assignments as $assignment) {
+      $unit = $assignment->get('field_storage_unit')->entity;
+      $unitLabel = $unit?->get('field_storage_unit_id')->value ?? $unit?->label() ?? '';
+      if ($unitLabel !== '') {
+        $unitLabels[] = $unitLabel;
+      }
+      $typeLabel = $unit?->get('field_storage_type')->entity?->label() ?? '';
+      $references[] = $this->buildAssignmentReference($unitLabel, $typeLabel);
+
+      $user = $assignment->get('field_storage_user')->entity;
+      if ($user instanceof UserInterface) {
+        $memberNames[] = $user->getDisplayName() ?: $user->getEmail();
+      }
+    }
+
+    if ($unitLabels) {
+      $metadata['storage_units'] = implode(', ', array_unique($unitLabels));
+    }
+    if ($memberNames) {
+      $metadata['storage_members'] = implode(', ', array_unique($memberNames));
+    }
+    if ($references) {
+      $metadata['storage_reference'] = implode(' | ', array_filter($references));
+    }
+
+    return array_filter($metadata);
+  }
+
+  /**
+   * Build a concise reference string for an assignment.
+   */
+  protected function buildAssignmentReference(?string $unitLabel, ?string $typeLabel): string {
+    $parts = [];
+    if ($unitLabel) {
+      $parts[] = $unitLabel;
+    }
+    if ($typeLabel) {
+      $parts[] = $typeLabel;
+    }
+    return implode(' - ', array_filter($parts));
+  }
+
+  /**
+   * Build item-level reference string for metadata.
+   */
+  protected function buildItemReference(array $assignmentIds): string {
+    if (!$assignmentIds) {
+      return '';
+    }
+    $storage = $this->entityTypeManager->getStorage('storage_assignment');
+    $assignment = $storage->load(reset($assignmentIds));
+    if (!$assignment) {
+      return '';
+    }
+    $unit = $assignment->get('field_storage_unit')->entity;
+    $unitLabel = $unit?->get('field_storage_unit_id')->value ?? $unit?->label() ?? '';
+    $typeLabel = $unit?->get('field_storage_type')->entity?->label() ?? '';
+    return $this->buildAssignmentReference($unitLabel, $typeLabel);
   }
 
   /**
