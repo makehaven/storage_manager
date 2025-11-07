@@ -80,7 +80,7 @@ class ClaimStorageForm extends FormBase {
 
     $form['#attached']['library'][] = 'storage_manager/claim';
 
-    $type_options = $this->buildTypeOptions($units);
+    $type_options = $this->buildTypeOptions();
     $selected_type = $form_state->getValue('filter_type') ?: NULL;
 
     $form['filter_pills'] = [
@@ -138,10 +138,14 @@ class ClaimStorageForm extends FormBase {
     ];
 
     if (!$filtered_units) {
+      $message_text = $this->t('No storage units are currently available to claim. Please check back later or contact staff for assistance.');
+      if ($selected_type && isset($type_options[$selected_type])) {
+        $message_text = $this->t('No @type storage units are currently available. Please check back later or contact staff for assistance.', ['@type' => $type_options[$selected_type]]);
+      }
       $form['units_wrapper']['no_units'] = [
         '#type' => 'container',
         '#attributes' => ['class' => ['messages', 'messages--warning']],
-        'text' => ['#markup' => $this->t('No storage units are currently available to claim. Please check back later or contact staff for assistance.')],
+        'text' => ['#markup' => $message_text],
       ];
     }
     else {
@@ -329,15 +333,15 @@ class ClaimStorageForm extends FormBase {
   }
 
   /**
-   * Builds a list of storage types present in the available units.
+   * Builds a list of all storage types.
    */
-  protected function buildTypeOptions(array $units): array {
+  protected function buildTypeOptions(): array {
     $options = [];
-    foreach ($units as $unit) {
-      $type = $unit->get('field_storage_type')->entity;
-      if ($type) {
-        $options[$type->id()] = $type->label();
-      }
+    /** @var \Drupal\taxonomy\TermStorageInterface $term_storage */
+    $term_storage = $this->storageEntityTypeManager->getStorage('taxonomy_term');
+    $types = $term_storage->loadTree('storage_type', 0, NULL, TRUE);
+    foreach ($types as $type) {
+      $options[(string) $type->id()] = $type->label();
     }
     asort($options, SORT_NATURAL | SORT_FLAG_CASE);
     return $options;
