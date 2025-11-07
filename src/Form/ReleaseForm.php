@@ -2,6 +2,7 @@
 
 namespace Drupal\storage_manager\Form;
 
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
@@ -19,6 +20,7 @@ class ReleaseForm extends FormBase {
     private readonly NotificationManager $notificationManager,
     private readonly ViolationManager $violationManager,
     private readonly StripeAssignmentManager $stripeAssignmentManager,
+    private readonly CacheTagsInvalidatorInterface $cacheTagsInvalidator,
   ) {}
 
   public static function create(ContainerInterface $container): static {
@@ -27,6 +29,7 @@ class ReleaseForm extends FormBase {
       $container->get('storage_manager.notification_manager'),
       $container->get('storage_manager.violation_manager'),
       $container->get('storage_manager.stripe_assignment_manager'),
+      $container->get('cache_tags.invalidator'),
     );
   }
 
@@ -143,6 +146,7 @@ class ReleaseForm extends FormBase {
     }
 
     $this->messenger()->addStatus($this->t('Released unit.'));
+    $this->cacheTagsInvalidator->invalidateTags(['storage_assignment_list']);
     $form_state->setRedirectUrl(Url::fromRoute('storage_manager.dashboard'));
   }
 }

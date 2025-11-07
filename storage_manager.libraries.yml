@@ -12,3 +12,8 @@ claim:
   css:
     theme:
       css/storage-claim.css: {}
+
+member:
+  css:
+    theme:
+      css/storage-member.css: {}

@@ -4,6 +4,7 @@ namespace Drupal\storage_manager\Service;
 
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Mail\MailManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -23,6 +24,7 @@ class NotificationManager {
     private readonly LoggerInterface $logger,
     private readonly TimeInterface $time,
     private readonly ViolationManager $violationManager,
+    private readonly FileUrlGeneratorInterface $fileUrlGenerator,
   ) {}
 
   /**
@@ -40,6 +42,9 @@ class NotificationManager {
       $this->logger->warning('Storage Manager notification "@event" skipped because no template is configured.', ['@event' => $event]);
       return;
     }
+    $admin_templates = $config->get('notifications.templates_admin') ?? [];
+    $admin_defaults = $this->getDefaultAdminTemplates();
+    $admin_template = $admin_templates[$event] ?? ($admin_defaults[$event] ?? ['subject' => '', 'body' => '']);
 
     $assignment = $context['assignment'] ?? NULL;
     if (!$assignment instanceof EckEntityInterface) {
@@ -54,6 +59,12 @@ class NotificationManager {
 
     $subject = $this->replaceTokens($templates[$event]['subject'], $replacements);
     $body = $this->replaceTokens($templates[$event]['body'], $replacements);
+    $admin_subject = trim((string) ($admin_template['subject'] ?? '')) !== ''
+      ? $this->replaceTokens($admin_template['subject'], $replacements)
+      : $subject;
+    $admin_body = trim((string) ($admin_template['body'] ?? '')) !== ''
+      ? $this->replaceTokens($admin_template['body'], $replacements)
+      : $body;
 
     $langcode = $user instanceof UserInterface
       ? ($user->getPreferredLangcode() ?: $this->languageManager->getDefaultLanguage()->getId())
@@ -70,7 +81,7 @@ class NotificationManager {
     if ($recipients) {
       $addresses = array_filter(array_map('trim', explode(',', $recipients)));
       foreach ($addresses as $address) {
-        $this->deliver($event, $address, $langcode, $subject, $body);
+        $this->deliver($event, $address, $langcode, $admin_subject, $admin_body);
       }
     }
   }
@@ -133,6 +144,23 @@ class NotificationManager {
 
     $site_name = $this->configFactory->get('system.site')->get('name');
 
+    $assignment_view_url = Url::fromRoute('entity.storage_assignment.canonical', ['storage_assignment' => $assignment->id()], ['absolute' => TRUE])->toString();
+    $assignment_admin_url = Url::fromRoute('storage_manager.assignment_edit', ['storage_assignment' => $assignment->id()], ['absolute' => TRUE])->toString();
+    $photo_links = $this->buildReleasePhotoLinks($assignment);
+    $member_account_url = $user instanceof UserInterface
+      ? Url::fromRoute('entity.user.canonical', ['user' => $user->id()], ['absolute' => TRUE])->toString()
+      : '';
+
+    $stripe_status = $this->getFieldString($assignment, 'field_storage_stripe_status');
+    $stripe_subscription_id = $this->getFieldString($assignment, 'field_storage_stripe_sub_id');
+    $stripe_customer_id = $this->getStripeCustomerId($assignment, $user);
+    $manual_required = $assignment->hasField('field_stripe_manual_review')
+      ? (bool) ($assignment->get('field_stripe_manual_review')->value ?? FALSE)
+      : FALSE;
+    $manual_note = $assignment->hasField('field_stripe_manual_note')
+      ? trim((string) ($assignment->get('field_stripe_manual_note')->value ?? ''))
+      : '';
+
     return [
       '[member_name]' => $user?->getDisplayName() ?? '',
       '[member_email]' => $user?->getEmail() ?? '',
@@ -148,6 +176,15 @@ class NotificationManager {
       '[violation_total_due]' => $this->formatMoney($violation_total),
       '[site_name]' => $site_name ?: 'MakeHaven',
       '[generated_at]' => $this->formatDate($this->time->getRequestTime()),
+      '[member_account_url]' => $member_account_url,
+      '[assignment_view_url]' => $assignment_view_url,
+      '[assignment_admin_url]' => $assignment_admin_url,
+      '[release_photo_links]' => $photo_links ? implode("\n", $photo_links) : '',
+      '[stripe_status]' => $stripe_status,
+      '[stripe_subscription_id]' => $stripe_subscription_id,
+      '[stripe_customer_id]' => $stripe_customer_id,
+      '[stripe_manual_review_required]' => $manual_required ? $this->t('Yes') : $this->t('No'),
+      '[stripe_manual_review_note]' => $manual_note,
     ];
   }
 
@@ -182,6 +219,50 @@ class NotificationManager {
     return number_format((float) $value, 2);
   }
 
+  /**
+   * Builds absolute URLs to any release photos captured on the assignment.
+   */
+  protected function buildReleasePhotoLinks(EckEntityInterface $assignment): array {
+    if (!$assignment->hasField('field_release_photo')) {
+      return [];
+    }
+
+    $links = [];
+    foreach ($assignment->get('field_release_photo') as $item) {
+      $file = $item->entity ?? NULL;
+      if ($file) {
+        $links[] = $this->fileUrlGenerator->generateAbsoluteString($file->getFileUri());
+      }
+    }
+    return $links;
+  }
+
+  protected function getFieldString(EckEntityInterface $assignment, string $field_name): string {
+    if ($assignment->hasField($field_name)) {
+      return (string) ($assignment->get($field_name)->value ?? '');
+    }
+    return '';
+  }
+
+  protected function getStripeCustomerId(EckEntityInterface $assignment, ?UserInterface $user): string {
+    $field_candidates = [
+      'field_storage_stripe_customer_id',
+      'field_stripe_customer_id',
+    ];
+    foreach ($field_candidates as $field) {
+      if ($assignment->hasField($field)) {
+        $value = $assignment->get($field)->value ?? '';
+        if ($value !== '') {
+          return (string) $value;
+        }
+      }
+    }
+    if ($user instanceof UserInterface && $user->hasField('field_stripe_customer_id')) {
+      return (string) ($user->get('field_stripe_customer_id')->value ?? '');
+    }
+    return '';
+  }
+
   protected function formatDate($value): string {
     if ($value instanceof \DateTimeInterface) {
       return $value->format('Y-m-d');
@@ -196,5 +277,30 @@ class NotificationManager {
       }
     }
     return '';
+  }
+
+  protected function getDefaultAdminTemplates(): array {
+    return [
+      'assignment' => [
+        'subject' => (string) $this->t('New storage assignment: [unit_id] for [member_name]'),
+        'body' => (string) $this->t("Member: [member_name] ([member_email])\nUnit: [unit_id] ([storage_type])\nMonthly: [monthly_cost]\nStart date: [assignment_start]\nStripe status: [stripe_status]\nStripe subscription: [stripe_subscription_id]\nStripe customer: [stripe_customer_id]\nManual review required: [stripe_manual_review_required]\nManual note: [stripe_manual_review_note]\n\nMember profile: [member_account_url]\nAssignment details: [assignment_admin_url]\nMember-facing view: [assignment_view_url]"),
+      ],
+      'release' => [
+        'subject' => (string) $this->t('Storage released: [unit_id] by [member_name]'),
+        'body' => (string) $this->t("Member: [member_name] ([member_email])\nUnit: [unit_id] ([storage_type])\nStart: [assignment_start]\nReleased: [release_date]\nViolations total: [violation_total_due]\nStripe status: [stripe_status]\nManual review required: [stripe_manual_review_required]\nManual note: [stripe_manual_review_note]\n\nMember profile: [member_account_url]\nAssignment details: [assignment_admin_url]\nRelease photos:\n[release_photo_links]"),
+      ],
+      'violation_warning' => [
+        'subject' => (string) $this->t('Violation opened: [unit_id] for [member_name]'),
+        'body' => (string) $this->t("Member: [member_name] ([member_email])\nUnit: [unit_id]\nViolation start: [violation_start]\nDaily rate: [violation_daily_rate]\n\nAssignment details: [assignment_admin_url]"),
+      ],
+      'violation_fine' => [
+        'subject' => (string) $this->t('Violation fine update: [unit_id] ([member_name])'),
+        'body' => (string) $this->t("Member: [member_name]\nUnit: [unit_id]\nDaily rate: [violation_daily_rate]\nTotal due: [violation_total_due]\n\nAssignment details: [assignment_admin_url]"),
+      ],
+      'violation_resolved' => [
+        'subject' => (string) $this->t('Violation resolved: [unit_id] ([member_name])'),
+        'body' => (string) $this->t("Member: [member_name]\nUnit: [unit_id]\nStart: [violation_start]\nResolved: [violation_resolved]\nTotal due: [violation_total_due]\n\nAssignment details: [assignment_admin_url]"),
+      ],
+    ];
   }
 }

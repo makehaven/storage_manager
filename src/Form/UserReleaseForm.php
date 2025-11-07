@@ -3,6 +3,7 @@
 namespace Drupal\storage_manager\Form;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Entity\ContentEntityForm;
@@ -15,28 +16,44 @@ use Drupal\storage_manager\Service\NotificationManager;
 use Drupal\storage_manager\Service\ViolationManager;
 use Drupal\storage_manager\Service\StripeAssignmentManager;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Render\Element;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 
 /**
  * Confirmation form for members releasing their own storage assignment.
  */
 class UserReleaseForm extends ContentEntityForm {
+  use DependencySerializationTrait;
 
   private StripeAssignmentManager $stripeAssignmentManager;
+  private EntityTypeManagerInterface $storageEntityTypeManager;
+  private NotificationManager $notificationManager;
+  private ViolationManager $violationManager;
+  private ConfigFactoryInterface $storageConfigFactory;
+  private AccountProxyInterface $storageCurrentUser;
+  private CacheTagsInvalidatorInterface $cacheTagsInvalidator;
 
   public function __construct(
     EntityRepositoryInterface $entity_repository,
     EntityTypeBundleInfoInterface $entity_type_bundle_info,
     TimeInterface $time,
-    private readonly EntityTypeManagerInterface $storageEntityTypeManager,
-    private readonly NotificationManager $notificationManager,
-    private readonly ViolationManager $violationManager,
-    private readonly ConfigFactoryInterface $storageConfigFactory,
-    private readonly AccountProxyInterface $storageCurrentUser,
+    EntityTypeManagerInterface $storageEntityTypeManager,
+    NotificationManager $notificationManager,
+    ViolationManager $violationManager,
+    ConfigFactoryInterface $storageConfigFactory,
+    AccountProxyInterface $storageCurrentUser,
+    CacheTagsInvalidatorInterface $cacheTagsInvalidator,
     ?StripeAssignmentManager $stripeAssignmentManager = NULL
   ) {
     parent::__construct($entity_repository, $entity_type_bundle_info, $time);
+    $this->storageEntityTypeManager = $storageEntityTypeManager;
+    $this->notificationManager = $notificationManager;
+    $this->violationManager = $violationManager;
+    $this->storageConfigFactory = $storageConfigFactory;
+    $this->storageCurrentUser = $storageCurrentUser;
+    $this->cacheTagsInvalidator = $cacheTagsInvalidator;
     if (!$stripeAssignmentManager) {
       throw new \InvalidArgumentException('StripeAssignmentManager service is required.');
     }
@@ -53,6 +70,7 @@ class UserReleaseForm extends ContentEntityForm {
       $container->get('storage_manager.violation_manager'),
       $container->get('config.factory'),
       $container->get('current_user'),
+      $container->get('cache_tags.invalidator'),
       $container->get('storage_manager.stripe_assignment_manager'),
     );
   }
@@ -128,11 +146,20 @@ class UserReleaseForm extends ContentEntityForm {
     if ($photo_verification_mode !== 'disabled' && isset($form['field_release_photo'])) {
       $form['field_release_photo']['#access'] = TRUE;
       $form['field_release_photo']['#required'] = ($photo_verification_mode === 'required');
+      $form['field_release_photo']['#after_build'][] = [static::class, 'cleanReleasePhotoWidget'];
     }
 
     $form['actions']['submit']['#value'] = $this->t('Release storage');
 
     return $form;
+  }
+
+  public function validateForm(array &$form, FormStateInterface $form_state): void {
+    parent::validateForm($form, $form_state);
+
+    if ($this->isReleasePhotoRequired() && !$this->hasReleasePhotoUpload($form_state->getValue('field_release_photo'))) {
+      $form_state->setErrorByName('field_release_photo', $this->t('Please upload a photo showing the cleared storage space.'));
+    }
   }
 
   public function save(array $form, FormStateInterface $form_state) {
@@ -153,6 +180,18 @@ class UserReleaseForm extends ContentEntityForm {
     $release_date = (new DrupalDateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d');
     $assignment->set('field_storage_assignment_status', 'ended');
     $assignment->set('field_storage_end_date', $release_date);
+
+    if ($assignment->hasField('field_release_photo')) {
+      $default_alt = (string) $this->t('Storage release photo');
+      foreach ($assignment->get('field_release_photo') as $item) {
+        if ($item->isEmpty()) {
+          continue;
+        }
+        if ($item->alt === NULL || $item->alt === '') {
+          $item->alt = $default_alt;
+        }
+      }
+    }
 
     $status = parent::save($form, $form_state);
 
@@ -207,8 +246,59 @@ class UserReleaseForm extends ContentEntityForm {
     }
 
     $this->messenger()->addStatus($this->t('Your storage has been released.'));
+    $this->cacheTagsInvalidator->invalidateTags(['storage_assignment_list']);
     $form_state->setRedirect('storage_manager.member_dashboard');
 
     return $status;
+  }
+
+  private function isReleasePhotoRequired(): bool {
+    return $this->storageConfigFactory->get('storage_manager.settings')->get('release_photo_verification') === 'required';
+  }
+
+  private function hasReleasePhotoUpload($value): bool {
+    if (!is_array($value)) {
+      return FALSE;
+    }
+
+    foreach ($value as $item) {
+      if (!is_array($item)) {
+        continue;
+      }
+      $target_id = $item['target_id'] ?? NULL;
+      $fids = isset($item['fids']) ? array_filter((array) $item['fids']) : [];
+      if (!empty($target_id) || !empty($fids)) {
+        return TRUE;
+      }
+    }
+
+    return FALSE;
+  }
+
+  public static function cleanReleasePhotoWidget(array $element, FormStateInterface $form_state): array {
+    if (!isset($element['widget']) || !is_array($element['widget'])) {
+      return $element;
+    }
+
+    foreach (Element::children($element['widget']) as $delta) {
+      if (isset($element['widget'][$delta]['alt'])) {
+        $element['widget'][$delta]['alt']['#required'] = FALSE;
+        $element['widget'][$delta]['alt']['#access'] = FALSE;
+        $element['widget'][$delta]['alt']['#attributes']['required'] = FALSE;
+        unset($element['widget'][$delta]['alt']['#states']['required']);
+        unset($element['widget'][$delta]['alt']['#attributes']['aria-required']);
+        if (isset($element['widget'][$delta]['alt']['#attributes']['class'])) {
+          $classes = (array) $element['widget'][$delta]['alt']['#attributes']['class'];
+          $element['widget'][$delta]['alt']['#attributes']['class'] = array_values(array_diff($classes, ['required']));
+        }
+      }
+      if (isset($element['widget'][$delta]['title'])) {
+        $element['widget'][$delta]['title']['#required'] = FALSE;
+        $element['widget'][$delta]['title']['#access'] = FALSE;
+        unset($element['widget'][$delta]['title']['#states']['required']);
+      }
+    }
+
+    return $element;
   }
 }

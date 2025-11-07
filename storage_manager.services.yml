@@ -43,6 +43,7 @@ services:
       - '@logger.channel.storage_manager'
       - '@datetime.time'
       - '@storage_manager.violation_manager'
+      - '@file_url_generator'
 
   storage_manager.statistics_service:
     class: Drupal\storage_manager\Service\StatisticsService

@@ -98,6 +98,8 @@ class ClaimStorageForm extends FormBase {
     if (!$selected_type) {
       $all_button_classes[] = 'is-active';
     }
+    $all_button_class_list = array_merge(['storage-claim-filter'], $all_button_classes);
+
     $form['filter_pills']['all'] = [
       '#type' => 'submit',
       '#value' => $this->t('All types'),
@@ -108,7 +110,7 @@ class ClaimStorageForm extends FormBase {
         'callback' => '::refreshAvailableUnits',
         'wrapper' => 'storage-claim-units',
       ],
-      '#attributes' => ['class' => $all_button_classes],
+      '#attributes' => ['class' => $all_button_class_list],
     ];
 
     foreach ($type_options as $id => $label) {
@@ -116,6 +118,7 @@ class ClaimStorageForm extends FormBase {
       if ((string) $id === (string) $selected_type) {
         $button_classes[] = 'is-active';
       }
+      $button_class_list = array_merge(['storage-claim-filter'], $button_classes);
       $form['filter_pills']['type_' . $id] = [
         '#type' => 'submit',
         '#value' => $label,
@@ -126,7 +129,7 @@ class ClaimStorageForm extends FormBase {
           'callback' => '::refreshAvailableUnits',
           'wrapper' => 'storage-claim-units',
         ],
-        '#attributes' => ['class' => $button_classes],
+        '#attributes' => ['class' => $button_class_list],
       ];
     }
 
@@ -144,7 +147,9 @@ class ClaimStorageForm extends FormBase {
       }
       $form['units_wrapper']['no_units'] = [
         '#type' => 'container',
-        '#attributes' => ['class' => ['messages', 'messages--warning']],
+        '#attributes' => [
+          'class' => ['messages', 'messages--warning', 'storage-claim-no-results'],
+        ],
         'text' => ['#markup' => $message_text],
       ];
     }

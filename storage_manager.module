@@ -1,6 +1,7 @@
 <?php
 
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Url;
 
@@ -106,6 +107,32 @@ function storage_manager_entity_operation(EntityInterface $entity) {
   }
 
   return $operations;
+}
+
+/**
+ * Implements hook_entity_view().
+ */
+function storage_manager_entity_view(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display, $view_mode) {
+  if ($entity->getEntityTypeId() !== 'storage_assignment') {
+    return;
+  }
+
+  if (!$entity->hasField('field_release_photo') || $entity->get('field_release_photo')->isEmpty()) {
+    return;
+  }
+
+  $photos = $entity->get('field_release_photo')->view('default');
+  if (!$photos) {
+    return;
+  }
+
+  $build['storage_manager_release_photos'] = [
+    '#type' => 'details',
+    '#title' => t('Release photos'),
+    '#open' => TRUE,
+    '#weight' => 100,
+    'items' => $photos,
+  ];
 }
 
 /**

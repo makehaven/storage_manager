@@ -50,13 +50,12 @@ class EditAssignmentForm extends FormBase {
     ]);
     $violation_link = Link::fromTextAndUrl($this->t('Open violation manager'), $violation_url)->toString();
 
-    $violation_message = $this->t('Manage violations for this assignment on the dedicated violation form. !link', ['!link' => $violation_link]);
+    $violation_message = $this->t('Start or manage storage violations for this assignment using the dedicated violation form.') . ' ' . $violation_link;
     $violation_message_class = 'messages--info';
     if ($active_violation) {
-      $violation_message = $this->t('An active violation (started @start) exists for this assignment. Manage it on the dedicated violation form. !link', [
+      $violation_message = $this->t('An active violation (started @start) exists for this assignment. Continue managing it on the dedicated violation form.', [
         '@start' => $this->formatDate($active_violation->get('field_storage_vi_start')->value),
-        '!link' => $violation_link,
-      ]);
+      ]) . ' ' . $violation_link;
       $violation_message_class = 'messages--warning';
     }
 

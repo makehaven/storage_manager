@@ -168,6 +168,8 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       $default_enabled[$item] = $item;
     }
     $templates = $config->get('notifications.templates') ?? [];
+    $admin_templates = $config->get('notifications.templates_admin') ?? [];
+    $admin_defaults = $this->getDefaultAdminTemplates();
 
     $form['notifications'] = [
       '#type' => 'details',
@@ -206,11 +208,21 @@ class StorageManagerSettingsForm extends ConfigFormBase {
         '<code>[violation_start]</code>',
         '<code>[violation_resolved]</code>',
         '<code>[site_name]</code>',
+        '<code>[member_account_url]</code>',
+        '<code>[assignment_view_url]</code>',
+        '<code>[assignment_admin_url]</code>',
+        '<code>[release_photo_links]</code>',
+        '<code>[stripe_status]</code>',
+        '<code>[stripe_subscription_id]</code>',
+        '<code>[stripe_customer_id]</code>',
+        '<code>[stripe_manual_review_required]</code>',
+        '<code>[stripe_manual_review_note]</code>',
       ]),
     ];
 
     foreach ($events as $key => $info) {
       $template = $templates[$key] ?? ['subject' => '', 'body' => ''];
+      $admin_template = $admin_templates[$key] ?? ($admin_defaults[$key] ?? ['subject' => '', 'body' => '']);
       $form['notifications'][$key] = [
         '#type' => 'details',
         '#title' => $info['label'],
@@ -235,6 +247,27 @@ class StorageManagerSettingsForm extends ConfigFormBase {
         '#title' => $this->t('Body'),
         '#default_value' => $template['body'] ?? '',
         '#rows' => 8,
+      ];
+
+      $form['notifications'][$key]['admin_settings'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Admin notification'),
+        '#open' => FALSE,
+        '#description' => $this->t('Optional override sent only to staff recipients. Leave blank to reuse the member subject/body.'),
+      ];
+      $form['notifications'][$key]['admin_settings']['template_' . $key . '_admin_subject'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Admin subject'),
+        '#default_value' => $admin_template['subject'] ?? '',
+        '#maxlength' => 255,
+        '#parents' => ['template_' . $key . '_admin_subject'],
+      ];
+      $form['notifications'][$key]['admin_settings']['template_' . $key . '_admin_body'] = [
+        '#type' => 'textarea',
+        '#title' => $this->t('Admin body'),
+        '#default_value' => $admin_template['body'] ?? '',
+        '#rows' => 8,
+        '#parents' => ['template_' . $key . '_admin_body'],
       ];
     }
 
@@ -278,13 +311,19 @@ class StorageManagerSettingsForm extends ConfigFormBase {
     $config->set('notifications.recipients', $form_state->getValue('recipients'));
 
     $templates = [];
+    $admin_templates = [];
     foreach ($events as $key => $info) {
       $templates[$key] = [
         'subject' => $form_state->getValue('template_' . $key . '_subject'),
         'body' => $form_state->getValue('template_' . $key . '_body'),
       ];
+      $admin_templates[$key] = [
+        'subject' => $form_state->getValue('template_' . $key . '_admin_subject'),
+        'body' => $form_state->getValue('template_' . $key . '_admin_body'),
+      ];
     }
     $config->set('notifications.templates', $templates);
+    $config->set('notifications.templates_admin', $admin_templates);
     $config->save();
 
     parent::submitForm($form, $form_state);
@@ -311,6 +350,31 @@ class StorageManagerSettingsForm extends ConfigFormBase {
       'violation_resolved' => [
         'label' => $this->t('Violation resolved'),
         'description' => $this->t('Sent when a violation is marked resolved.'),
+      ],
+    ];
+  }
+
+  protected function getDefaultAdminTemplates(): array {
+    return [
+      'assignment' => [
+        'subject' => $this->t('New storage assignment: [unit_id] for [member_name]'),
+        'body' => $this->t("Member: [member_name] ([member_email])\nUnit: [unit_id] ([storage_type])\nMonthly: [monthly_cost]\nStart date: [assignment_start]\nStripe status: [stripe_status]\nStripe subscription: [stripe_subscription_id]\nStripe customer: [stripe_customer_id]\nManual review required: [stripe_manual_review_required]\nManual note: [stripe_manual_review_note]\n\nMember profile: [member_account_url]\nAssignment details: [assignment_admin_url]\nMember-facing view: [assignment_view_url]"),
+      ],
+      'release' => [
+        'subject' => $this->t('Storage released: [unit_id] by [member_name]'),
+        'body' => $this->t("Member: [member_name] ([member_email])\nUnit: [unit_id] ([storage_type])\nStart: [assignment_start]\nReleased: [release_date]\nViolations total: [violation_total_due]\nStripe status: [stripe_status]\nManual review required: [stripe_manual_review_required]\nManual note: [stripe_manual_review_note]\n\nMember profile: [member_account_url]\nAssignment details: [assignment_admin_url]\nRelease photos:\n[release_photo_links]"),
+      ],
+      'violation_warning' => [
+        'subject' => $this->t('Violation opened: [unit_id] for [member_name]'),
+        'body' => $this->t("Member: [member_name] ([member_email])\nUnit: [unit_id]\nViolation start: [violation_start]\nDaily rate: [violation_daily_rate]\n\nAssignment details: [assignment_admin_url]"),
+      ],
+      'violation_fine' => [
+        'subject' => $this->t('Violation fine update: [unit_id] ([member_name])'),
+        'body' => $this->t("Member: [member_name]\nUnit: [unit_id]\nDaily rate: [violation_daily_rate]\nTotal due: [violation_total_due]\n\nAssignment details: [assignment_admin_url]"),
+      ],
+      'violation_resolved' => [
+        'subject' => $this->t('Violation resolved: [unit_id] ([member_name])'),
+        'body' => $this->t("Member: [member_name]\nUnit: [unit_id]\nStart: [violation_start]\nResolved: [violation_resolved]\nTotal due: [violation_total_due]\n\nAssignment details: [assignment_admin_url]"),
       ],
     ];
   }

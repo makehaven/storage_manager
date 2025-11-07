@@ -516,6 +516,16 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
   public function history() {
     $request = \Drupal::request();
     $filter_uid = $request->query->get('user');
+    $sort_field = $request->query->get('sort') ?: 'last_activity';
+    $sort_dir = strtolower($request->query->get('direction') ?: 'desc');
+    $valid_sort_fields = ['unit', 'member', 'start', 'release', 'last_activity'];
+    if (!in_array($sort_field, $valid_sort_fields, TRUE)) {
+      $sort_field = 'last_activity';
+    }
+    if (!in_array($sort_dir, ['asc', 'desc'], TRUE)) {
+      $sort_dir = 'desc';
+    }
+    $current_sort = ['field' => $sort_field, 'direction' => $sort_dir];
 
     $storage = $this->entityTypeManager()->getStorage('storage_assignment');
     $query = $storage->getQuery()->accessCheck(TRUE)->sort('created', 'DESC');
@@ -565,14 +575,14 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       $start_raw = $assignment->get('field_storage_start_date')->value;
       $end_raw = $assignment->get('field_storage_end_date')->value;
 
+      $start_ts = $start_raw ? (strtotime($start_raw) ?: 0) : 0;
       $start = $start_raw ?: '—';
-      if ($end_raw) {
-        $end_ts = strtotime($end_raw);
-        $end = $end_ts ? date('Y-m-d', $end_ts) : $end_raw;
-      }
-      else {
-        $end = '—';
-      }
+      $end_ts = $end_raw ? (strtotime($end_raw) ?: 0) : 0;
+      $end = $end_raw
+        ? ($end_ts ? date('Y-m-d', $end_ts) : $end_raw)
+        : '—';
+      $last_activity_ts = $end_ts ?: $start_ts;
+      $last_activity = $end !== '—' ? $end : $start;
 
       $note = $assignment->get('field_storage_issue_note')->value ?? '';
       $violations = $violation_manager->loadViolations((int) $assignment->id());
@@ -585,11 +595,16 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       }
 
       $violation_label = '—';
+      $violation_link = NULL;
       if ($active_violation) {
         $daily = $active_violation->get('field_storage_vi_daily')->value ?? $violation_manager->getDefaultDailyRate();
         $violation_label = $daily > 0
           ? $this->t('Active · $@daily/day', ['@daily' => number_format((float) $daily, 2)])
           : $this->t('Active');
+        $violation_link = Link::fromTextAndUrl(
+          $this->t('View violation'),
+          Url::fromRoute('entity.storage_violation.canonical', ['storage_violation' => $active_violation->id()])
+        )->toString();
       }
       elseif (!empty($violations)) {
         $latest = $violations[0] ?? NULL;
@@ -598,28 +613,61 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
           $violation_label = $total_due !== NULL && $total_due !== ''
             ? $this->t('Resolved · $@amount', ['@amount' => number_format((float) $total_due, 2)])
             : $this->t('Resolved');
+          $violation_link = Link::fromTextAndUrl(
+            $this->t('View violation'),
+            Url::fromRoute('entity.storage_violation.canonical', ['storage_violation' => $latest->id()])
+          )->toString();
         }
       }
+
+      $actions = [];
+      $actions[] = Link::fromTextAndUrl(
+        $this->t('View assignment'),
+        Url::fromRoute('entity.storage_assignment.canonical', ['storage_assignment' => $assignment->id()])
+      )->toString();
+      if ($violation_link) {
+        $actions[] = $violation_link;
+      }
+      $actions_cell = [
+        'data' => [
+          '#markup' => $actions ? implode(' · ', $actions) : $this->t('—'),
+        ],
+      ];
 
       $rows[] = [
         $unit?->get('field_storage_unit_id')->value ?? '—',
         $user?->label() ?? '—',
-        $start,
-        $end,
+        [
+          'data' => $start,
+          'sort_value' => $start_ts,
+        ],
+        [
+          'data' => $end,
+          'sort_value' => $end_ts,
+        ],
+        [
+          'data' => $last_activity,
+          'sort_value' => $last_activity_ts,
+        ],
         $violation_label,
         $note,
+        $actions_cell,
       ];
     }
+
+    $rows = $this->sortHistoryRows($rows, $sort_field, $sort_dir);
 
     $build['table'] = [
       '#type' => 'table',
       '#header' => [
-        $this->t('Unit ID'),
-        $this->t('Member'),
-        $this->t('Start'),
-        $this->t('Release'),
+        $this->buildHistorySortHeader('unit', $this->t('Unit ID'), $current_sort),
+        $this->buildHistorySortHeader('member', $this->t('Member'), $current_sort),
+        $this->buildHistorySortHeader('start', $this->t('Start'), $current_sort),
+        $this->buildHistorySortHeader('release', $this->t('Release'), $current_sort),
+        $this->buildHistorySortHeader('last_activity', $this->t('Last activity'), $current_sort),
         $this->t('Violation'),
         $this->t('Notes'),
+        $this->t('Actions'),
       ],
       '#rows' => $rows,
       '#empty' => $this->t('No assignments found.'),
@@ -706,6 +754,87 @@ class DashboardController extends ControllerBase implements ContainerInjectionIn
       }
 
       $result = strcasecmp($value_a, $value_b);
+      return $direction === 'desc' ? -$result : $result;
+    });
+
+    return $rows;
+  }
+
+  protected function buildHistorySortHeader(string $key, $label, array $current): array {
+    $direction = 'asc';
+    if ($current['field'] === $key && $current['direction'] === 'asc') {
+      $direction = 'desc';
+    }
+    $url = Url::fromRoute('storage_manager.history', [], [
+      'query' => ['sort' => $key, 'direction' => $direction],
+    ]);
+
+    $attributes = [];
+    if ($current['field'] === $key) {
+      $attributes['class'][] = 'is-active';
+    }
+
+    $link = Link::fromTextAndUrl($label, $url)->toRenderable();
+    if ($attributes) {
+      $link['#attributes'] = array_merge($link['#attributes'] ?? [], $attributes);
+    }
+
+    return ['data' => $link];
+  }
+
+  protected function sortHistoryRows(array $rows, string $field, string $direction): array {
+    $index_map = [
+      'unit' => 0,
+      'member' => 1,
+      'start' => 2,
+      'release' => 3,
+      'last_activity' => 4,
+    ];
+    if (!isset($index_map[$field])) {
+      return $rows;
+    }
+    $column_index = $index_map[$field];
+
+    usort($rows, function ($a, $b) use ($column_index, $direction) {
+      $value_a = $a[$column_index];
+      $value_b = $b[$column_index];
+
+      if (is_array($value_a)) {
+        if (isset($value_a['sort_value'])) {
+          $value_a = (string) $value_a['sort_value'];
+        }
+        elseif (isset($value_a['data']['#markup'])) {
+          $value_a = (string) ($value_a['data']['#markup'] ?? '');
+        }
+        else {
+          $value_a = (string) ($value_a['data'] ?? '');
+        }
+      }
+      else {
+        $value_a = (string) $value_a;
+      }
+
+      if (is_array($value_b)) {
+        if (isset($value_b['sort_value'])) {
+          $value_b = (string) $value_b['sort_value'];
+        }
+        elseif (isset($value_b['data']['#markup'])) {
+          $value_b = (string) ($value_b['data']['#markup'] ?? '');
+        }
+        else {
+          $value_b = (string) ($value_b['data'] ?? '');
+        }
+      }
+      else {
+        $value_b = (string) $value_b;
+      }
+
+      if (is_numeric($value_a) && is_numeric($value_b)) {
+        $result = $value_a <=> $value_b;
+      }
+      else {
+        $result = strcasecmp($value_a, $value_b);
+      }
       return $direction === 'desc' ? -$result : $result;
     });
 

@@ -34,7 +34,15 @@ class MemberStorageController extends ControllerBase {
    */
   public function page(): array {
     $account_id = (int) $this->storageCurrentUser->id();
-    $build = [];
+    $build = [
+      '#attached' => [
+        'library' => ['storage_manager/member'],
+      ],
+      '#cache' => [
+        'contexts' => ['user'],
+        'tags' => ['storage_assignment_list'],
+      ],
+    ];
 
     $shortcuts = $this->buildShortcutLinks();
     if ($shortcuts) {
@@ -49,10 +57,38 @@ class MemberStorageController extends ControllerBase {
       ->execute();
 
     if (!$ids) {
+      $claim_link = Link::fromTextAndUrl(
+        $this->t('Browse available storage'),
+        Url::fromRoute('storage_manager.claim')
+      )->toRenderable();
+      $claim_link['#attributes']['class'] = ['btn', 'btn-primary', 'storage-member-empty__cta'];
+
       $build['empty'] = [
         '#type' => 'container',
-        '#attributes' => ['class' => ['messages', 'messages--status']],
-        'content' => ['#markup' => $this->t('You do not currently have any storage assigned.')],
+        '#attributes' => ['class' => ['storage-member-empty', 'card', 'shadow-sm']],
+        'icon' => [
+          '#type' => 'html_tag',
+          '#tag' => 'div',
+          '#value' => '',
+          '#attributes' => ['class' => ['storage-member-empty__icon'], 'aria-hidden' => 'true'],
+        ],
+        'heading' => [
+          '#type' => 'html_tag',
+          '#tag' => 'h3',
+          '#value' => $this->t('You do not currently have any storage assigned.'),
+          '#attributes' => ['class' => ['storage-member-empty__title']],
+        ],
+        'body' => [
+          '#type' => 'html_tag',
+          '#tag' => 'p',
+          '#value' => $this->t('Claim a space to keep projects and materials safe between visits.'),
+          '#attributes' => ['class' => ['storage-member-empty__body']],
+        ],
+        'actions' => [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['storage-member-empty__actions']],
+          'claim' => $claim_link,
+        ],
       ];
       return $build;
     }
@@ -102,6 +138,7 @@ class MemberStorageController extends ControllerBase {
       ],
       '#rows' => $rows,
       '#empty' => $this->t('No active storage assignments found.'),
+      '#attributes' => ['class' => ['table', 'table-striped', 'align-middle', 'storage-member-table']],
     ];
 
     $release_message = $this->storageConfigFactory->get('storage_manager.settings')->get('release_confirmation_message');
@@ -130,7 +167,9 @@ class MemberStorageController extends ControllerBase {
 
     $billing_links = [];
     $module_handler = \Drupal::moduleHandler();
-    if ($this->storageCurrentUser->isAuthenticated() && $module_handler->moduleExists('mh_stripe')) {
+    $stripe_enabled = $module_handler->moduleExists('mh_stripe')
+      && (bool) $this->storageConfigFactory->get('storage_manager.settings')->get('stripe.enable_billing');
+    if ($this->storageCurrentUser->isAuthenticated() && $stripe_enabled) {
       $billing_links[] = [
         'title' => $this->t('View Storage Invoices'),
         'url' => Url::fromRoute('storage_manager_billing.portal'),
@@ -172,7 +211,7 @@ class MemberStorageController extends ControllerBase {
 
     $build = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['storage-manager-shortcuts']],
+      '#attributes' => ['class' => ['storage-manager-shortcuts', 'card', 'shadow-sm']],
       '#cache' => [
         'contexts' => ['user.permissions'],
       ],
