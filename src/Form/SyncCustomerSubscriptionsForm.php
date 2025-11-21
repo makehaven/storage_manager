@@ -139,11 +139,12 @@ class SyncCustomerSubscriptionsForm extends ConfirmFormBase {
           '#items' => $summary_items,
         ];
 
+        $defaultValue = $selection['default_option'] ?: 'skip';
         $form['assignments'][$selection['assignment_id']]['selection'] = [
           '#type' => 'radios',
           '#title' => $this->t('Link to subscription item'),
           '#options' => $selection['options'],
-          '#default_value' => 'skip',
+          '#default_value' => $defaultValue,
         ];
       }
 
@@ -197,9 +198,17 @@ class SyncCustomerSubscriptionsForm extends ConfirmFormBase {
       if ($selection === '' || $selection === 'skip') {
         continue;
       }
-      [$subscription_id, $item_id] = explode('::', $selection);
-      if (isset($usedItems[$item_id])) {
-        $this->messenger()->addWarning($this->t('Subscription item @item was selected more than once; skipping duplicate link.', ['@item' => $item_id]));
+      [$subscription_id, $item_id] = array_pad(explode('::', $selection, 2), 2, '');
+      $availableSlots = (int) ($meta['option_slots'][$selection] ?? 1);
+      if ($availableSlots <= 0) {
+        $availableSlots = 1;
+      }
+      $usedCount = $usedItems[$item_id] ?? 0;
+      if ($usedCount >= $availableSlots) {
+        $this->messenger()->addWarning($this->t('Subscription item @item in subscription @sub has no remaining capacity for additional storage links.', [
+          '@item' => $item_id ?: $this->t('unknown item'),
+          '@sub' => $subscription_id ?: $this->t('unknown subscription'),
+        ]));
         continue;
       }
 
@@ -212,7 +221,7 @@ class SyncCustomerSubscriptionsForm extends ConfirmFormBase {
       try {
         $this->stripeAssignmentManager->linkAssignmentToSubscriptionItem($assignment, $subscription_id, $item_id);
         $success++;
-        $usedItems[$item_id] = TRUE;
+        $usedItems[$item_id] = $usedCount + 1;
       }
       catch (\Throwable $e) {
         $failures++;
@@ -253,11 +262,13 @@ class SyncCustomerSubscriptionsForm extends ConfirmFormBase {
       $currentItem = $assignment->hasField('field_storage_stripe_item_id')
         ? trim((string) ($assignment->get('field_storage_stripe_item_id')->value ?? ''))
         : '';
-      if ($currentSub !== '' && $currentItem !== '') {
+
+      if ($this->assignmentAlreadyLinked($assignment, $subscriptions, $currentSub, $currentItem)) {
         continue;
       }
 
-      $options = $this->buildItemOptions($subscriptions, $priceId);
+      $optionsData = $this->buildItemOptions($subscriptions, $priceId);
+      $options = $optionsData['options'];
       if (count($options) <= 1) {
         continue;
       }
@@ -265,7 +276,7 @@ class SyncCustomerSubscriptionsForm extends ConfirmFormBase {
       $match = $this->findMatchingItem($assignment, $priceId, $subscriptions, $autoUsedItems);
       $defaultOption = $match ? $match['subscription_id'] . '::' . $match['item_id'] : '';
       if ($match) {
-        $autoUsedItems[] = $match['item_id'];
+        $autoUsedItems[$match['item_id']] = ($autoUsedItems[$match['item_id']] ?? 0) + 1;
       }
 
       $selections[] = [
@@ -282,6 +293,7 @@ class SyncCustomerSubscriptionsForm extends ConfirmFormBase {
           : '',
         'release_photo' => $this->buildReleasePhotoLink($assignment),
         'options' => $options,
+        'option_slots' => $optionsData['slots'],
         'default_option' => $defaultOption,
       ];
     }
@@ -289,8 +301,42 @@ class SyncCustomerSubscriptionsForm extends ConfirmFormBase {
     return $selections;
   }
 
+  /**
+   * Determine whether an assignment already has a Stripe link.
+   */
+  protected function assignmentAlreadyLinked($assignment, array $subscriptions, string $currentSub = '', string $currentItem = ''): bool {
+    if ($currentItem !== '') {
+      return TRUE;
+    }
+    if ($currentSub !== '' && !$assignment->hasField('field_storage_stripe_item_id')) {
+      return TRUE;
+    }
+
+    if ($currentSub !== '' && $currentItem !== '') {
+      return TRUE;
+    }
+
+    $assignmentId = (int) $assignment->id();
+    foreach ($subscriptions as $subscription) {
+      $subscriptionIds = $this->parseAssignmentIds($subscription->metadata['storage_assignment_ids'] ?? '');
+      if (in_array($assignmentId, $subscriptionIds, TRUE)) {
+        return TRUE;
+      }
+      foreach ($subscription->items->data as $item) {
+        $itemAssignments = $this->extractAssignmentIds($item);
+        if (in_array($assignmentId, $itemAssignments, TRUE)) {
+          return TRUE;
+        }
+      }
+    }
+
+    return FALSE;
+  }
+
   protected function buildItemOptions(array $subscriptions, string $expectedPriceId): array {
     $options = [];
+    $slots = [];
+
     foreach ($subscriptions as $subscription) {
       foreach ($subscription->items->data as $item) {
         if (empty($item->id)) {
@@ -300,39 +346,55 @@ class SyncCustomerSubscriptionsForm extends ConfirmFormBase {
         if ($priceId === '' || $priceId !== $expectedPriceId) {
           continue;
         }
-        $metadataIds = trim((string) ($item->metadata['storage_assignment_ids'] ?? ''));
-        if ($metadataIds !== '') {
-          // Already linked to a storage assignment.
+
+        $usage = $this->summarizeItemUsage($item);
+        if ($usage['available'] <= 0) {
           continue;
         }
+
         $knownLabel = $this->getPriceLabel($priceId);
         $productName = $knownLabel ?: ($this->resolveProductName($item->price) ?? $this->t('Unknown product'));
-        $optionLabel = $this->t('@product – @price (qty: @qty) in subscription @sub (@status)', [
+        $optionLabel = $this->t('@product – @price (qty: @qty_total, linked: @linked, available: @available) in subscription @sub (@status)', [
           '@product' => $productName,
           '@price' => $priceId ?: $this->t('Unknown price'),
-          '@qty' => $item->quantity ?? 1,
+          '@qty_total' => $usage['quantity'],
+          '@linked' => $usage['linked'],
+          '@available' => $usage['available'],
           '@sub' => $subscription->id ?? $this->t('unknown'),
           '@status' => ucfirst($subscription->status ?? 'unknown'),
         ]);
-        $options[$subscription->id . '::' . $item->id] = $optionLabel;
+        $value = $subscription->id . '::' . $item->id;
+        $options[$value] = $optionLabel;
+        $slots[$value] = $usage['available'];
       }
     }
+
     if ($options) {
       $options = ['skip' => $this->t('Leave unlinked (no change)')] + $options;
     }
-    return $options;
+
+    return [
+      'options' => $options,
+      'slots' => $slots,
+    ];
   }
 
   protected function findMatchingItem($assignment, string $priceId, array $subscriptions, array $usedItems): ?array {
     foreach ($subscriptions as $subscription) {
       foreach ($subscription->items->data as $item) {
-        if (($item->id ?? '') === '' || in_array($item->id, $usedItems, TRUE)) {
+        if (($item->id ?? '') === '') {
           continue;
         }
         $itemPriceId = $item->price->id ?? '';
         if ($itemPriceId !== $priceId) {
           continue;
         }
+        $usage = $this->summarizeItemUsage($item);
+        $usedCount = $usedItems[$item->id] ?? 0;
+        if ($usage['available'] <= $usedCount) {
+          continue;
+        }
+
         return [
           'subscription_id' => $subscription->id,
           'subscription_status' => $subscription->status ?? 'unknown',
@@ -448,6 +510,77 @@ protected function buildSubscriptionTable(array $subscriptions): array {
       'attributes' => ['target' => '_blank', 'rel' => 'noopener'],
     ]);
     return Link::fromTextAndUrl($this->t('View photo'), $url)->toString();
+  }
+
+  /**
+   * Summarize how many storage assignments are linked to a Stripe item.
+   */
+  protected function summarizeItemUsage($item): array {
+    $quantity = $this->normalizeQuantity((int) ($item->quantity ?? 0));
+    $linkedIds = $this->extractAssignmentIds($item);
+    $linkedCount = count($linkedIds);
+    $available = max($quantity - $linkedCount, 0);
+
+    return [
+      'quantity' => $quantity,
+      'linked' => $linkedCount,
+      'available' => $available,
+    ];
+  }
+
+  /**
+   * Extract linked assignment IDs from Stripe metadata.
+   */
+  protected function extractAssignmentIds($item): array {
+    if (!is_object($item) || !isset($item->metadata)) {
+      return [];
+    }
+    $ids = $this->parseAssignmentIds($item->metadata['storage_assignment_ids'] ?? '');
+    if (!$ids) {
+      $single = '';
+      if (isset($item->metadata['storage_assignment_id'])) {
+        $single = $item->metadata['storage_assignment_id'];
+      }
+      elseif (isset($item->metadata->storage_assignment_id)) {
+        $single = $item->metadata->storage_assignment_id;
+      }
+      if (is_string($single) && trim($single) !== '') {
+        $ids = [(int) trim($single)];
+      }
+    }
+    $ids = array_filter(array_map('intval', $ids));
+    sort($ids);
+    return $ids;
+  }
+
+  /**
+   * Convert a metadata list to integer assignment IDs.
+   */
+  protected function parseAssignmentIds($value): array {
+    if (!is_string($value)) {
+      return [];
+    }
+    $value = trim($value);
+    if ($value === '') {
+      return [];
+    }
+    $parts = preg_split('/\s*,\s*/', $value);
+    $ids = [];
+    foreach ($parts as $part) {
+      if ($part === '') {
+        continue;
+      }
+      $ids[] = (int) $part;
+    }
+    sort($ids);
+    return $ids;
+  }
+
+  /**
+   * Ensure Stripe quantities are at least one.
+   */
+  protected function normalizeQuantity(int $quantity): int {
+    return $quantity > 0 ? $quantity : 1;
   }
 
 }
